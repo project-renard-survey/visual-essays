@@ -3,12 +3,18 @@ import Vuetify from 'vuetify'
 import VueScrollmagic from 'vue-scrollmagic'
 import httpVueLoader from 'http-vue-loader'
 import VueYoutube from 'vue-youtube'
+import VueCytoscape from 'vue-cytoscape'
+//import cytoscape from 'cytoscape'
+//import popper from 'cytoscape-popper'
+
 import App from './App.vue'
 import store from './store'
 import 'vuetify/dist/vuetify.min.css'
 import Lingallery from '../assets/js/lingallery.umd.min.js'
 import marked from 'marked'
 import VModal from 'vue-js-modal'
+
+// cytoscape dependencies
  
 import 'leaflet'
 import 'leaflet-polylinedecorator'
@@ -56,7 +62,12 @@ const defaultComponents = [
   { name: 'entityInfoboxDialog', component: EntityInfoboxDialog },
   //{ name: 'cardsImageViewer', src: `${componentsBaseURL}/components/ImageViewer/CardsImageViewer.vue` },
   //{ name: 'hiresImageViewer', src: `${componentsBaseURL}/components/ImageViewer/HiresImageViewer.vue` },
-  { name: 'entityInfobox', src: `${componentsBaseURL}/components/EntityInfobox.vue` }
+  { name: 'entityInfobox', src: `${componentsBaseURL}/components/EntityInfobox.vue` },
+
+  { name: 'bfsNetwork', src: `${componentsBaseURL}/components/BFSNetwork.vue`, selectors: ['tag:bfsnetwork'], 'icon': 'fa-chart-network', 'label': 'BFS Network' },
+  { name: 'cytoNetwork', src: `${componentsBaseURL}/components/Cytoscape.vue`, selectors: ['tag:cytonetwork'], 'icon': 'fa-chart-network', 'label': 'Cytoscape Network' },
+  { name: 'visNetwork', src: `${componentsBaseURL}/components/VisNetwork.vue`, selectors: ['tag:visnetwork'], 'icon': 'fa-chart-network', 'label': 'Vis Network' },
+
 ]
 
 const components = {}
@@ -189,6 +200,8 @@ function initApp() {
   Vue.use(VueAnalytics, {
     id: 'UA-125778965-6'
   })
+
+  Vue.use(VueCytoscape)
 
   for (let [name, component] of Object.entries(components)) {
     if (!component.component) {

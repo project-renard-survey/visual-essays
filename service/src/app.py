@@ -332,6 +332,7 @@ def add_vue_app(html, js_lib):
             'https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900',
             'https://cdn.jsdelivr.net/npm/@mdi/font@4.x/css/materialdesignicons.min.css',
             'https://unpkg.com/leaflet@1.6.0/dist/leaflet.css',
+            'https://unpkg.com/vis-network/styles/vis-network.min.css',
         ]:
         style = soup.new_tag('link')
         style.attrs['rel'] = 'stylesheet'
@@ -340,6 +341,26 @@ def add_vue_app(html, js_lib):
 
     for url in [
             'https://unpkg.com/mirador@beta/dist/mirador.min.js',
+            #'https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.15.1/cytoscape.min.js',
+            'https://unpkg.com/cytoscape/dist/cytoscape.min.js',
+            'https://unpkg.com/popper.js@1.14.7/dist/umd/popper.js',
+            'https://cdn.jsdelivr.net/npm/cytoscape-popper@1.0.4/cytoscape-popper.min.js',
+            #'https://unpkg.com/tippy.js@4.0.1/umd/index.all.min.js',
+            #'https://unpkg.com/tippy.js@4.0.1/index.css',
+
+            #'https://cdnjs.cloudflare.com/ajax/libs/popper.js/2.4.4/cjs/popper-lite.min.jss',
+            #'https://cdnjs.cloudflare.com/ajax/libs/cytoscape-popper/1.0.5/cytoscape-popper.js',
+            #'https://cdnjs.cloudflare.com/ajax/libs/tippy.js/6.2.5/tippy.min.js',
+            #'https://unpkg.com/@popperjs/core@2',
+            #'https://unpkg.com/tippy.js@6',
+
+            #'https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.js',
+            #'https://unpkg.com/alea@1.0.0/alea.js',
+            #'https://visjs.github.io/vis-network/examples/network/exampleUtil.js',
+            #'http://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css',
+            'https://unpkg.com/vis-data@latest/peer/umd/vis-data.min.js',
+            'https://unpkg.com/vis-network@latest/peer/umd/vis-network.min.js',
+
             js_lib
         ]:
         lib = soup.new_tag('script')

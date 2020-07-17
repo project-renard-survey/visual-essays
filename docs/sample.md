@@ -4,7 +4,7 @@
        title="Sample Essay"
        banner="/images/da_vinci_banner.jpg"
        layout="vtl"
-       author="Ron/Julia">
+       author="Ron">
 
 <param ve-component 
        name="network"
@@ -14,6 +14,7 @@
        label="Networks"
        dependencies="https://d3js.org/d3.v4.min.js">
 
+<!-- 
 <param ve-component
        name="bfsNetwork"
        src="/components/BFSNetwork.vue"
@@ -21,6 +22,7 @@
        icon="fa-chart-network"
        label="BFS Network"
        dependencies="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.15.1/cytoscape.min.js|https://cdnjs.cloudflare.com/ajax/libs/popper.js/2.4.4/cjs/popper-lite.min.jss|https://cdnjs.cloudflare.com/ajax/libs/cytoscape-popper/1.0.5/cytoscape-popper.js|https://cdnjs.cloudflare.com/ajax/libs/tippy.js/6.2.5/tippy.min.js">
+-->
 
 <param ve-component 
        name="starter"
@@ -82,7 +84,6 @@
 Ginevra de' Benci is a portrait painting by Leonardo da Vinci of the 15th-century Florentine aristocrat Ginevra de' Benci (born c.  1458). The oil-on-wood portrait was acquired by the National Gallery of Art in Washington, D.C. in 1967. The sum of US$5 million—an absolute record price at the time—came from the Ailsa Mellon Bruce Fund and was paid to the Princely Family of Liechtenstein. It is the only painting by Leonardo on public view in the Americas.
 <param ve-starter attr1="value1">
 <param ve-storiiies id="a71cm">
-<param ve-bfsNetwork>
 <param ve-open-seadragon
        fit="cover"
        title="British Isles"
@@ -104,11 +105,6 @@ Prunus occidentalis is a plant in the family Rosaceae of the order Rosales. The 
 <param ve-plant-specimen eid="Q165321" max="1">
 <param ve-plant-specimen eid="Q5486220" max="1">
 <param ve-heliconia-network>
-
-### Testing BFS Network
-
-Prunus occidentalis is a plant in the family Rosaceae of the order Rosales. The plant can be found in the Caribbean, Central America and northern South America. It is native to Puerto Rico. Its Spanish common names include almendrón. Its English common name is the western cherry laurel. The plant is common in the Toro Negro State Forest. Family of Liechtenstein. 
-<param ve-bfsNetwork>
 
 
 ### Specimen, using image viewer
@@ -152,6 +148,15 @@ Ginevra de' Benci is a portrait painting by Leonardo da Vinci of the 15th-centur
 Born out of wedlock to a notary, Piero da Vinci, and a peasant woman, Caterina, in Vinci, in the region of Florence, Italy, Leonardo was educated in the studio of the renowned Italian painter Andrea del Verrocchio. Much of his earlier working life was spent in the service of Ludovico il Moro in Milan, and he later worked in Rome, Bologna and Venice. He spent his last three years in France, where he died in 1519.
 <param ve-map basemap="Esri_WorldPhysical" center="Q82884" zoom="7">
 {: #link2 }
+
+### Testing BFS Network
+
+Prunus occidentalis is a plant in the family Rosaceae of the order Rosales. The plant can be found in the Caribbean, Central America and northern South America. It is native to Puerto Rico. Its Spanish common names include almendrón. Its English common name is the western cherry laurel. The plant is common in the Toro Negro State Forest. Family of Liechtenstein. 
+
+### Testing Vis.js Network
+
+Prunus occidentalis is a plant in the family Rosaceae of the order Rosales. The plant can be found in the Caribbean, Central America and northern South America. It is native to Puerto Rico. Its Spanish common names include almendrón. Its English common name is the western cherry laurel. The plant is common in the Toro Negro State Forest. Family of Liechtenstein. 
+<param ve-visNetwork layout="hierarchy">
 
 ### Hide labels
 

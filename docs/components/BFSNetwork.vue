@@ -1,6 +1,7 @@
 <template>
   <v-container :style="containerStyle">
-    <div id="cy"></div>
+	  <i class="fa fa-flag"></i>
+	  <div id="cy"></div>
   </v-container>
 </template>
 
@@ -109,6 +110,8 @@
 			    }),
 
 			  elements: {
+
+				/*
 			    nodes: [
 			      {data: {id: 'lewis', relationship: "father"}},
 			      {data: {id: 'frederick', relationsihp: "subject"}},
@@ -122,6 +125,24 @@
 			      {data: {source: 'frederick', target: 'charles'}},
 			      {data: {source: 'charles', target: 'joseph'}},
 			    ]
+			  },
+			  */
+			 nodes: [{
+				data: {
+					id: "a"
+				}
+				}, {
+				data: {
+					id: "b"
+				}
+				}],
+				edges: [{
+				data: {
+					id: "ab",
+					source: "a",
+					target: "b"
+				}
+				}]
 			  },
 
 			  layout: {
@@ -178,18 +199,24 @@
 		}
 		*/
 
+		
 		cy.on('mouseover', 'node', function(evt){
 			var node = evt.target;
+			evt.target.tippy.show();
 			console.log( 'Relationship: ' + node.data('relationship') );
 		});
+		
 
-		/*
+		
 		function makePopper(ele) {
 			console.log('in makePopper', ele)
 			let ref = ele.popperRef(); // used only for positioning
-			//let ref = ele;
+			
+			let dummyDomEle = document.querySelectorAll('node');
 
-			ele.tippy = tippy(ref, { // tippy options:
+			ele.tippy = tippy(ele, { // tippy options:
+
+				//trigger: 'manual', // call show() and hide() yourself
 				content: () => {
 				let content = document.createElement('div');
 
@@ -197,13 +224,13 @@
 
 				return content;
 				},
-				trigger: 'manual' // probably want manual mode
 			});
 		}
 
 		cy.ready(function() {
 			console.log('in cy.ready');
 			cy.elements().forEach(function(ele) {
+				console.log('ele', ele);
 				makePopper(ele);
 			});
 		});
@@ -213,8 +240,7 @@
 
 		cy.elements().unbind('mouseout');
 		cy.elements().bind('mouseout', (event) => event.target.tippy.hide());
-		*/
-
+		
 
 		cy.on('tap', 'node', function(){
 		  var nodes = this;
@@ -227,7 +253,7 @@
 		  console.log('nodes', nodes);
 		  console.log('food', food);
 
-
+			/*
 		  for(;;){
 		    var connectedEdges = nodes.connectedEdges(function(el){
 		      return !el.target().anySame( nodes );
@@ -269,9 +295,9 @@
 
 		    delay += duration;
 		  })(); }
-
+		*/
 		});
-
+		
 
     },
     methods: {
