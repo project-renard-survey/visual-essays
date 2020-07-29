@@ -1,0 +1,36 @@
+﻿Nodes						
+Index	Label	QID				
+1	Maria Dorothea Wilhelmina Freiin von Metternich Angelelli					
+2	Pietro Neri Lorenzo, Marquis Angelelli					
+3	Maria Vittoria of Savoy	Q2399148				
+4	Victor Amadeus of Savoy, Prince of Carigon	Q2254102				
+5	Louis XV, King of France	Q7738				
+6	Anna Maria Luisa de' Medici	Q233181				
+7	Cardinal Fluery	Q439144				
+8	Louis Henri, Duke of Bourbon	Q455392				
+9	Johanna Isabella von Bouscheidt (von Schaesberg)					
+10	Caspar Franz Edmund von Bourscheidt					
+11	Charles III Philip, Elector Palatine					
+12	Baroness Massimiliana von Moltke					
+13	Charles VI, Holy Roman Emperor					
+						
+Edges						
+source	target	label				
+1	6	received portions of and persmission to distribute the infant convulsion powder of				
+1	2	married to				
+2	6	informant of				
+3	6	received infant convulsion powder from				
+3	4	married to				
+4	5	was the master of ceremonies at the court of				
+3	7	had a close relationship with				
+3	8	had a close relationship with				
+7	5	served as the chief minister to				
+8	5	was related to and served as prime minister to				
+9	6	received infant convulsion powder from				
+9	10	married to				
+10	11	member of the court of				
+12	6	received portions of and persmission to distribute the infant convulsion powder of				
+12	13	member of the court of				
+						
+						
+						

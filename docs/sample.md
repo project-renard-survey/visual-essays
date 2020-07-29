@@ -79,6 +79,13 @@
 <param ve-entity title="Vinci, Tuscany, Italy" eid="Q82884">
 <param ve-entity title="Leonardo da Vinci" eid="Q762">
 
+<param ve-entity title="Maria Vittoria of Savoy" eid="Q2399148">
+<param ve-entity title="Victor Amadeus of Savoy, Prince of Carigon" eid="Q2254102">
+<param ve-entity title="Louis XV, King of France" eid="Q7738">
+<param ve-entity title="Anna Maria Luisa de' Medici" eid="Q233181">
+<param ve-entity title="Cardinal Fluery" eid="Q439144">
+<param ve-entity title="Louis Henri, Duke of Bourbon" eid="Q455392">
+
 ## OpenSeadragon Image Viewer
 
 Ginevra de' Benci is a portrait painting by Leonardo da Vinci of the 15th-century Florentine aristocrat Ginevra de' Benci (born c.  1458). The oil-on-wood portrait was acquired by the National Gallery of Art in Washington, D.C. in 1967. The sum of US$5 million—an absolute record price at the time—came from the Ailsa Mellon Bruce Fund and was paid to the Princely Family of Liechtenstein. It is the only painting by Leonardo on public view in the Americas.
@@ -156,7 +163,7 @@ Prunus occidentalis is a plant in the family Rosaceae of the order Rosales. The 
 ### Testing Vis.js Network
 
 Prunus occidentalis is a plant in the family Rosaceae of the order Rosales. The plant can be found in the Caribbean, Central America and northern South America. It is native to Puerto Rico. Its Spanish common names include almendrón. Its English common name is the western cherry laurel. The plant is common in the Toro Negro State Forest. Family of Liechtenstein. 
-<param ve-visNetwork layout="hierarchy">
+<param ve-visNetwork layout="network" file="medici.tsv">
 
 ### Hide labels
 
