@@ -79,14 +79,14 @@
 <param ve-entity title="Vinci, Tuscany, Italy" eid="Q82884">
 <param ve-entity title="Leonardo da Vinci" eid="Q762">
 
-<!--
+
 <param ve-entity title="Maria Vittoria of Savoy" eid="Q2399148">
 <param ve-entity title="Victor Amadeus of Savoy, Prince of Carigon" eid="Q2254102">
 <param ve-entity title="Louis XV, King of France" eid="Q7738">
 <param ve-entity title="Anna Maria Luisa de' Medici" eid="Q233181">
 <param ve-entity title="Cardinal Fluery" eid="Q439144">
 <param ve-entity title="Louis Henri, Duke of Bourbon" eid="Q455392">
--->
+
 
 ## OpenSeadragon Image Viewer
 
