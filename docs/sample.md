@@ -79,12 +79,14 @@
 <param ve-entity title="Vinci, Tuscany, Italy" eid="Q82884">
 <param ve-entity title="Leonardo da Vinci" eid="Q762">
 
+<!--
 <param ve-entity title="Maria Vittoria of Savoy" eid="Q2399148">
 <param ve-entity title="Victor Amadeus of Savoy, Prince of Carigon" eid="Q2254102">
 <param ve-entity title="Louis XV, King of France" eid="Q7738">
 <param ve-entity title="Anna Maria Luisa de' Medici" eid="Q233181">
 <param ve-entity title="Cardinal Fluery" eid="Q439144">
 <param ve-entity title="Louis Henri, Duke of Bourbon" eid="Q455392">
+-->
 
 ## OpenSeadragon Image Viewer
 
@@ -163,7 +165,7 @@ Prunus occidentalis is a plant in the family Rosaceae of the order Rosales. The 
 ### Testing Vis.js Network
 
 Prunus occidentalis is a plant in the family Rosaceae of the order Rosales. The plant can be found in the Caribbean, Central America and northern South America. It is native to Puerto Rico. Its Spanish common names include almendrón. Its English common name is the western cherry laurel. The plant is common in the Toro Negro State Forest. Family of Liechtenstein. 
-<param ve-visNetwork layout="network" file="medici.tsv">
+<param ve-visNetwork layout="network" file="medici.tsv" arrows="to, from">
 
 ### Hide labels
 
