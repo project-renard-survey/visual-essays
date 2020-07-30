@@ -69,18 +69,18 @@ const defaults = {
                     nodes: nodes,
                     edges: edges
                 };
+
                 let options = {
                     interaction: { hover: true },
                     layout: {
                         randomSeed: undefined,
                         improvedLayout:true,
                         clusterThreshold: 150,
-                        hierarchical: false,
+                        hierarchical: this.items[0].layout === 'hierarchy' ? true : false,
                     },
                       edges:{
-                        arrows: 'to',
+                        arrows: this.items[0].arrows,
                         //color: 'red',
-                        font: '12px arial #ff0000',
                         scaling:{
                            label: true,
                         },
@@ -170,7 +170,6 @@ const defaults = {
                     console.log('result from getEntity', result);
                     var imageobj = result['summary info'].originalimage;
                     node.image = imageobj.source;
-                    //node.title = imageobj.source;
                     node.shape = "circularImage";
                     return node
                 })
