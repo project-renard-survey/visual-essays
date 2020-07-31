@@ -355,8 +355,7 @@ def entity(eid=None):
     logger.info(f'DEFAULT_ACCT={DEFAULT_ACCT} DEFAULT_REPO={DEFAULT_REPO}')
     kwargs['acct'] = DEFAULT_ACCT if DEFAULT_ACCT else KNOWN_SITES.get(site, {}).get('acct')
     kwargs['repo'] = DEFAULT_REPO if DEFAULT_REPO else KNOWN_SITES.get(site, {}).get('repo')
-    # kwargs['refresh'] = kwargs['refresh'] == 'true' if 'refresh' in kwargs else kwargs.pop('mode', ENV) == 'dev'
-    kwargs['refresh'] = True
+    kwargs['refresh'] = kwargs['refresh'] in ('true', '') if 'refresh' in kwargs else False
     logger.info(f'entity: eid={eid} kwargs={kwargs}')
     if request.method == 'OPTIONS':
         return ('', 204, cors_headers)

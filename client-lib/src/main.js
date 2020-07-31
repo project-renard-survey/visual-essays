@@ -19,7 +19,7 @@ import 'leaflet-polylinedecorator'
 import 'leaflet.control.opacity/dist/L.Control.Opacity.css'
 import 'leaflet.control.opacity'
 import '../assets/styles/main.css'
-import { parseQueryString, prepItems, elemIdPath, itemsInElements, groupItems, parseDate, eqSet } from './utils'
+import { parseQueryString, prepItems, elemIdPath, itemsInElements, groupItems, parseDate, eqSet, delimitedStringToObjArray } from './utils'
 
 import '../assets/js/leaflet-fa-markers.js'
 import '../assets/js/fontawesome-pro.min.js'
@@ -39,7 +39,7 @@ import _ from 'lodash'
 
 import MobileDetect from 'mobile-detect'
 
-const VERSION = '0.7.21'
+const VERSION = '0.7.22'
 
 console.log(window.location.hostname)
 const componentsBaseURL = window.location.hostname === 'localhost' ? '' : 'https://jstor-labs.github.io/visual-essays'
@@ -61,6 +61,7 @@ const defaultComponents = [
   { name: 'videoPlayer', src: `${componentsBaseURL}/components/VideoPlayer.vue`, selectors: ['tag:video'], icon: 'fa-video', label: 'Videos' },
   { name: 'storiiiesViewer', src: `${componentsBaseURL}/components/StoriiiesViewer.vue`, selectors: ['tag:storiiies'], icon: 'fa-book', label: 'Storiiies Viewer from main.js' },
   { name: 'plantSpecimenViewer', src: `${componentsBaseURL}/components/PlantSpecimenViewer.vue`, selectors: ['tag:plant-specimen'], icon: 'fa-seedling', label: 'Plant Specimens' },
+  { name: 'visNetworkViewer', src: `${componentsBaseURL}/components/VisNetworkViewer.vue`, selectors: ['tag:vis-network'], icon: 'fa-chart-network', label: 'Vis Network' },
   { name: 'timeSelector', src: `${componentsBaseURL}/components/TimeSelector.vue` },
   // { name: 'person', src: `${componentsBaseURL}/components/EntityViewer.vue`, selectors: ['category:person'], 'icon': 'fa-user', 'label': 'People' },
   // { name: 'entity', src: `${componentsBaseURL}/components/EntityViewer.vue`, selectors: ['tag:entity'], 'icon': 'fa-brackets-curly', 'label': 'Entities' },
@@ -92,7 +93,32 @@ Vue.mixin({
     // selectedItemID () { return store.getters.selectedItemID }
     // visualizerIsOpen() { return store.getters.visualizerIsOpen }
   },
-  methods: { parseDate, eqSet }
+  methods: {
+    parseDate, eqSet, delimitedStringToObjArray,
+    load(url, callback) {
+      let e
+      if (url.split('.').pop() === 'js') {
+          e = document.createElement('script')
+          e.src = url
+          e.type='text/javascript'
+      } else {
+          e = document.createElement('link')
+          e.href = url
+          e.rel='stylesheet'
+      }
+      e.addEventListener('load', callback)
+      document.getElementsByTagName('head')[0].appendChild(e)
+    },
+    loadDependencies(dependencies, i, callback) {
+      this.load(dependencies[i], () => {
+          if (i < dependencies.length-1) {
+              this.loadDependencies(dependencies, i+1, callback) 
+          } else {
+              callback()
+          }
+      })
+    }
+  }
 })
 
 const md = new MobileDetect(window.navigator.userAgent)

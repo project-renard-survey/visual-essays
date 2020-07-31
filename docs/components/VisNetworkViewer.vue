@@ -1,0 +1,254 @@
+<template>
+  <div id="vis" :style="containerStyle">
+    <div id="mynetwork"></div>
+  </div>
+</template>
+
+<script>
+/* global vis, L */
+
+const dependencies = [
+  "https://unpkg.com/vis-network/styles/vis-network.min.css",
+  "https://unpkg.com/vis-data@latest/peer/umd/vis-data.min.js",
+  "https://unpkg.com/vis-network@latest/peer/umd/vis-network.min.js",
+];
+const defaults = {
+  popupOptions: { autoClose: false, closeButton: false, closeOnClick: false },
+};
+module.exports = {
+  name: "visNetwork",
+  props: {
+    items: { type: Array, default: () => [] },
+    selected: String,
+    width: Number,
+    height: Number,
+    hoverItemID: String,
+    selectedItemID: String,
+  },
+  data: () => ({
+    activeWindow: undefined,
+    popups: {},
+    active: new Set(),
+  }),
+  computed: {
+    containerStyle() {
+      return {
+        width: `${this.width}px`,
+        height: `${this.height}px`,
+        overflowY: "auto !important",
+      };
+    },
+    activeElements() {
+      return this.$store.getters.activeElements;
+    },
+    entities() {
+      return this.itemsInActiveElements.filter((item) => item.tag === "entity");
+    },
+    itemsInActiveElements() {
+      return this.$store.getters.itemsInActiveElements;
+    },
+    apiBaseURL() {
+      return window.location.origin;
+    },
+    componentsBaseURL() {
+      return window.location.hostname === "localhost"
+        ? ""
+        : "https://jstor-labs.github.io/visual-essays";
+    },
+  },
+  mounted() {
+    console.log(this.$options.name, this.items);
+    // this.init();
+    this.loadDependencies(dependencies, 0, this.init);
+  },
+  methods: {
+    init() {
+      var nodeslist = [];
+      var edgeslist = [];
+      //get input data here from file
+      this.getInput(this.items[0].file)
+        .then((delimitedDataString) => {
+          const delimiter =
+            this.items[0].file.split(".").pop() == "tsv" ? "\t" : ",";
+          const data = this.transformData(
+            this.delimitedStringToObjArray(delimitedDataString, delimiter)
+          );
+          nodeslist = data.nodes;
+          edgeslist = data.edges;
+        })
+        .then((result) => this.getImages(nodeslist)) // eslint-disable-line no-unused-vars
+        .then((result) => {
+          console.log("result", result);
+          this.renderGraph(nodeslist, edgeslist);
+        });
+    },
+    renderGraph(nodeslist, edgeslist) {
+      let nodes = new vis.DataSet(nodeslist);
+      let edges = new vis.DataSet(edgeslist);
+      console.log("nodeslist", nodeslist);
+      console.log("edgeslist", edgeslist);
+      var container = document.getElementById("mynetwork");
+      var data = {
+        nodes: nodes,
+        edges: edges,
+      };
+
+      let options = {
+        interaction: { hover: true },
+        layout: {
+          randomSeed: undefined,
+          improvedLayout: true,
+          clusterThreshold: 150,
+          hierarchical: this.items[0].layout === "hierarchy" ? true : false,
+        },
+        edges: {
+          arrows: this.items[0].arrows,
+          //color: 'red',
+          scaling: {
+            label: true,
+          },
+          shadow: true,
+          smooth: true,
+        },
+      };
+      //init network
+      var network = new vis.Network(container, data, options);
+      network.on("click", (properties) => {
+        var ids = properties.nodes;
+        var clickedNodes = nodes.get(ids);
+        console.log("clicked nodes:", clickedNodes);
+        if (clickedNodes[0].length > 0) {
+          this.setSelectedItemID(clickedNodes[0].qid);
+        }
+      });
+      network.body.emitter.emit("_dataChanged");
+      network.redraw();
+    },
+    setHoverItemID(itemID) {
+      this.$emit("hover-id", itemID);
+    },
+    setSelectedItemID(itemID) {
+      console.log("in setSelectedItemID", itemID);
+      this.$emit("selected-id", itemID);
+    },
+    addEventHandlers(elem, itemId) {
+      elem.on("click", () => {
+        this.setSelectedItemID(itemId);
+      });
+      elem.on("mouseover", () => {
+        this.setHoverItemID(itemId);
+      });
+      elem.on("mouseout", () => {
+        this.setHoverItemID();
+      });
+    },
+    addPopup(id, label, latLng, offset) {
+      if (!this.popups[id]) {
+        const popup = L.popup({
+          ...defaults.popupOptions,
+          ...{ offset: L.point(0, offset || 0) },
+        });
+        popup.setLatLng(latLng);
+        popup.setContent(`<h1 data-eid="${id}">${label}</h1>`);
+        popup.options.id = id;
+        this.popups[id] = popup;
+      }
+    },
+    getInput() {
+      return fetch(this.items[0].file).then((resp) => resp.text());
+    },
+    transformData(objArray) {
+      const nodes = {};
+      const transformed = { nodes: [], edges: [] };
+      objArray.forEach((obj) => {
+        ['source', 'target'].forEach((nodeType) => {
+          let nodeId = obj[nodeType].id || obj[nodeType].label;
+          if (nodes[nodeId] === undefined) {
+            let id = `${transformed.nodes.length}`;
+            let qid =
+              obj[nodeType].id[0] === "Q" ? obj[nodeType].id : undefined;
+            let label = obj[nodeType].label || obj[nodeType].id;
+            nodes[nodeId] = id;
+            transformed.nodes.push({ id, qid, label, title: label });
+          }
+        });
+      });
+      objArray.forEach((obj) => {
+        transformed.edges.push({
+          from: nodes[obj.source.id || obj.source.label],
+          to: nodes[obj.target.id || obj.target.label],
+          title: obj.edge.label || obj.edge.id,
+        });
+      });
+      return transformed;
+    },
+    //get entity (image) for a single node
+    getImage(node) {
+      return this.getEntity(node.qid).then((result) => {
+        if (result["summary info"] && result["summary info"].originalimage) {
+          var imageobj = result["summary info"].originalimage;
+          node.image = imageobj.source;
+          node.shape = "circularImage";
+        }
+        return node;
+      });
+    },
+    getImages(nodeslist) {
+      const promises = nodeslist
+        .filter((node) => node.qid)
+        .map((node) => this.getImage(node));
+      return Promise.all(promises);
+    },
+    toQueryString(args) {
+      const parts = [];
+      Object.keys(args).forEach((key) => {
+        parts.push(`${key}=${encodeURIComponent(args[key])}`);
+      });
+      return parts.join("&");
+    },
+    getEntity(eid) {
+      let url = `https://visual-essays.app/entity/${encodeURIComponent(eid)}`;
+      const args = {};
+      if (this.context) args.context = this.context;
+      //if (this.entity.article) args.article = this.entity.article
+      if (Object.keys(args).length > 0) {
+        url += `?${this.toQueryString(args)}`;
+      }
+      console.log(`getEntity=${url}`);
+      return fetch(url).then((resp) => resp.json());
+    },
+    getSummaryInfo() {
+      console.log("getSummaryInfo", this.eid, this.entity);
+      if (
+        this.entity["summary info"] === undefined &&
+        !this.requested.has(this.entity.id)
+      ) {
+        this.requested.add(this.entity.id);
+        this.getEntity().then((updated) => {
+          if (!updated["summary info"]) {
+            updated["summary info"] = null;
+          }
+          updated.id = this.eid;
+          this.$store.dispatch("updateItem", updated);
+        });
+      }
+    },
+  },
+};
+</script>
+
+<style>
+.vis-network {
+  overflow: visible;
+}
+body {
+  color: #d3d3d3;
+  font: 12pt arial;
+  background-color: #222222;
+}
+#vis,
+#mynetwork {
+  width: 100%;
+  height: 100%;
+}
+</style>
