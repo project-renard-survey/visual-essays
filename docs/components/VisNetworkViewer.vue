@@ -117,7 +117,7 @@ module.exports = {
         var ids = properties.nodes;
         var clickedNodes = nodes.get(ids);
         console.log("clicked nodes:", clickedNodes);
-        if (clickedNodes[0].length > 0) {
+        if (clickedNodes.length > 0) {
           this.setSelectedItemID(clickedNodes[0].qid);
         }
       });
