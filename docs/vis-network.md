@@ -1,6 +1,6 @@
 <param ve-config
        title="Vis network example"
-       banner="https://upload.wikimedia.org/wikipedia/commons/f/f9/Wikidata-knowledge-graph-fuzheado-metobjects-2.png"
+       banner="https://upload.wikimedia.org/wikipedia/commons/d/d7/Graphical_network.png"
        layout="vtl"
        author="Labs">
 
