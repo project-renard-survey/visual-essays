@@ -1,6 +1,6 @@
 <template>
   <v-card ref="viewer" id="viewer" :style="style">
-    <v-tabs v-if="visualizerIsOpen"
+    <v-tabs v-if="viewerIsOpen"
       ref="tabs"
       v-model="activeTab"
       center-active
@@ -38,9 +38,7 @@
 </template>
 
 <script>
-  import { addActivator } from './Activator'
   import { elemIdPath, itemsInElements } from '../utils'
-  // const tabOrder = ['map', 'image', 'video', 'location', 'place', 'person', 'plant', 'building', 'written_work', 'fictional_character', 'entity']
   const tabOrder = ['map', 'image', 'video']
 
   export default {
@@ -50,7 +48,6 @@
       spacer: undefined,
       tabs: [],
       activeTab: undefined,
-      visualizerIsOpen: false,
       hoverElemId: undefined,
       selected: undefined,
       viewerWidth: 0
@@ -61,9 +58,11 @@
       footerHeight() { return this.$store.getters.footerHeight },
       viewerHeight() { return this.viewportHeight/2 - 48 },
       viewportWidth() { return this.$store.getters.width },
+      selectedParagraphID() { return this.$store.getters.selectedParagraphID },
+      viewerIsOpen() { return this.$store.getters.viewerIsOpen },
       style() {
         return {
-          display: this.$refs.viewer && this.visualizerIsOpen ? 'block' : 'none',
+          display: this.$refs.viewer && this.viewerIsOpen ? 'block' : 'none',
           position: 'fixed',
           top: `${this.viewportHeight/2}px`,
           height: `${this.viewerHeight}px`,
@@ -72,82 +71,17 @@
       }
     },
     mounted() {
-      this.$store.dispatch('setTriggerOffset', 100)
-      if (this.$store.getters.layout === 'ho') {
-          this.visualizerIsOpen = true
-          document.querySelectorAll('.activator').forEach(activator => activator.style.display = 'none')
-      }
+      console.log('HorizontalViewer.mounted')
+      this.$store.dispatch('setTriggerOffset', 200)
       this.viewerWidth = this.$refs.viewer.$el.parentElement.offsetWidth
-      // this.waitForEssay()
       this.$nextTick(() => this.init())
     },
     methods: {
-      /*
-      waitForEssay() {
-        console.log(`waitForEssay: found=${document.getElementById('essay') !== undefined}`)
-        if (document.getElementById('essay')) {
-          this.init()
-        } else {
-          setTimeout(() => { this.waitForEssay() }, 1000)
-        }
-      },
-      */
       init() {
-        Array.from(document.body.querySelectorAll('p')).filter(elem => elem.id).forEach((para) => {
-          para.title = elemIdPath(para.id).join(',')
-          const itemsInPara = itemsInElements(elemIdPath(para.id), this.allItems)
-          this.paragraphs[para.id] = {
-            top: para.offsetTop,
-            items: itemsInPara
-          }
-          // Display/enable activator when cursor hovers over paragraph element
-          /*
-          para.addEventListener('mouseenter', (e) => {
-            const elemId = e.toElement.id
-            if (this.hoverElemId && this.hoverElemId !== elemId) {
-              const prior = document.querySelector(`[data-id="${this.hoverElemId}"]`)
-              if (prior) { prior.style.display = 'none' }
-            }
-            this.hoverElemId = undefined
-            if (!this.visualizerIsOpen) {
-              this.hoverElemId = elemId
-              document.querySelector(`[data-id="${this.hoverElemId}"]`).style.display = 'inline-block'
-            }
-          })
-          */
-          /*
-          para.addEventListener('mouseleave', (e) => {
-            const elemId = e.toElement.id
-            if (this.hoverElemId) {
-              const prior = document.querySelector(`[data-id="${this.hoverElemId}"]`)
-              if (prior) { prior.style.display = 'none' }
-            }
-            this.hoverElemId = undefined
-          })
-          */
-          if (itemsInPara.length > 0) {
-            para.classList.add('has-items')
-            para.addEventListener('click', (e) => {
-              this.visualizerIsOpen = true
-              const paraId = e.target.tagName === 'P'
-                ? e.target.id
-                : e.target.parentElement.id
-              if (this.paragraphs[paraId]) {
-                let offset = 100
-                let scrollable = document.getElementById('scrollableContent')
-                if (scrollable) {
-                  offset = -80
-                } else {
-                  scrollable = window
-                }
-                // const scrollTo = this.paragraphs[paraId].top - offset
-                // scrollable.scrollTo(0, scrollTo, )
-              }
-            })
-          }
-        })
         this.addSpacer()
-        // cthis.addActivators()
+      },
+      closeViewer() {
+        this.$store.dispatch('setViewerIsOpen', false)
       },
       addSpacer() {
         // Adds a spacer element that expands and contracts to match the size of the visualizer so
@@ -156,98 +90,9 @@
         this.spacer.id = 'essay-spacer'
         this.spacer.style.height = 0
         document.getElementById('essay').appendChild(this.spacer)
-      },
-      addActivators() {
-        const essay = document.getElementById('essay')
-        Array.from(document.body.querySelectorAll('p')).filter(elem => elem.id).forEach((para) => {
-          const paraData = this.paragraphs[para.id]
-          if (paraData.items.length > 0) {
-            addActivator(essay, para.id, paraData.top, paraData.items.map(item => item.id).join(','), this.activatorClickHandler)
-          }
-        })
-      },
-      openViewer(elemId) {
-        if (this.paragraphs[elemId]) {
-          this.visualizerIsOpen = true
-          document.querySelectorAll('.activator').forEach(activator => activator.style.display = 'none')
-          let offset = 100
-          let scrollable = document.getElementById('scrollableContent')
-          if (scrollable) {
-            offset = -80
-          } else {
-            scrollable = window
-          }
-          const scrollTo = this.paragraphs[elemId].top - offset
-          // console.log(`scrollTo: elem=${elemId} top=${scrollTo}`)
-          this.spacer.style.height = `${this.viewportHeight*0.7}px`
-          scrollable.scrollTo(0, scrollTo )
-        }
-      },
-      closeViewer() {
-        this.visualizerIsOpen = false
-      },
-      activatorClickHandler(e) {
-        const selectedParaId = e.target.parentElement.attributes['data-id'].value
-        this.openViewer(selectedParaId)
-      },
-      /*
-      addItemClickHandlers(elemId) {
-        document.getElementById(elemId).querySelectorAll('.inferred, .tagged').forEach((entity) => {
-          entity.addEventListener('click', this.itemClickHandler)
-        })
-      },
-      removeItemClickHandlers(elemId) {
-        const elem = document.getElementById(elemId)
-        if (elem) {
-          document.getElementById(elemId).querySelectorAll('.inferred, .tagged').forEach((entity) => {
-            entity.removeEventListener('click', this.itemClickHandler)
-          })
-        }
-      },
-      */
-      addItemClickHandlers(elemId) {
-        document.getElementById(elemId).querySelectorAll('.active-elem .inferred, .active-elem .tagged').forEach((entity) => {
-          entity.addEventListener('click', this.itemClickHandler)
-        })
-      },
-      removeItemClickHandlers(elemId) {
-        const elem = document.getElementById(elemId)
-        if (elem) {
-          document.getElementById(elemId).querySelectorAll('.active-elem .inferred, .active-elem .tagged').forEach((entity) => {
-            entity.removeEventListener('click', this.itemClickHandler)
-          })
-        }
-      },
-      itemClickHandler(e) {
-        e.stopPropagation()
-        const elemId = e.target.attributes['data-eid'].value
-        this.$store.dispatch('setSelectedItemID', elemId)
-        /*
-        const selectedItemId = e.toElement.attributes['data-eid'].value 
-        let found = false
-        for (let groupId in this.groups) {
-          const item = this.groups[groupId].items.find(item => item.id === selectedItemId)
-          if (item) {
-            this.activeTab = item.category === 'location' && this.groups.map
-              ? 'map'
-              : groupId
-            break
-          }
-        }
-        this.selected = selectedItemId
-        console.log(`itemClickHandler: selected=${this.selected} tab=${this.activeTab}`)
-        */
       }
     },
     watch: {
-      /*
-      footerHeight: {
-        handler: function () {
-          console.log(`viewportHeight=${this.viewportHeight} viewerHeight=${this.viewerHeight} footerHeight=${this.footerHeight} top=${this.viewportHeight/2}`)
-        },
-        immediate: true
-      },
-      */
       groups() {
         console.log(this.activeElement, this.groups)
         const availableGroups = []
@@ -266,12 +111,7 @@
           this.spacer.style.height = `${this.viewportHeight/2}px`
         }
       },      
-      viewportWidth() {   
-        document.querySelectorAll('.activator').forEach((activator) => {
-          const paraId = activator.attributes['data-id'].value
-          activator.style.top = `${this.paragraphs[paraId].top}px`
-        })
-      },
+      /*
       activeElement(active, prior) {
         if (prior) {
           this.removeItemClickHandlers(prior)
@@ -286,7 +126,8 @@
           this.addItemClickHandlers(active)
         }
       },
-      visualizerIsOpen(isOpen) {
+      */
+      viewerIsOpen(isOpen) {
         if (this.$refs.viewer) {
           this.$refs.viewer.$el.style.display = isOpen ? 'block' : 'none'
         }
@@ -297,6 +138,16 @@
           this.spacer.style.height = `${this.viewportHeight*0.7}px`
           document.getElementById(this.activeElement).classList.add('active-elem')
         }
+      },
+      selectedParagraphID: {
+        handler: function () {
+          if (this.selectedParagraphID) {
+            console.log(`selectedParagraphID=${this.selectedParagraphID}`)
+            this.$store.dispatch('setViewerIsOpen', !this.viewerIsOpen)
+            this.$store.dispatch('setSelectedParagraphID')
+          }
+        },
+        immediate: true
       }
     }
   }

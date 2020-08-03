@@ -1,6 +1,9 @@
 <template>
   <div id="mapWrapper" ref="mapWrapper" class="row wrapper">
-       <div ref="map" id="lmap" class="lmap" :style="`width:${width}px; height:${height}px; margin:0;`"></div>
+    <div ref="map" id="lmap" class="lmap" :style="`width:${width}px; height:${mapHeight}px; margin:0;`"></div>
+    <div ref="timeSelector" v-if="timeSelector" style="height: 45px; padding: 0 24px;">
+      <time-selector :initial-time-range="timeRange" @range-change="rangeChange" :data="timeData" />
+    </div>
   </div>
 </template>
 
@@ -47,26 +50,60 @@ module.exports = {
     opacityControl: undefined,
     popups: {},
     active: new Set(),
-
     featuresById: {},
-    markersByLatLng: {}
+    markersByLatLng: {},
+    mapHeight: 0,
+
+    geojsonIsLoading: false,
+    dateField: 'date',
+    data: [],
+    timeData: [],
+    timeRange: [],
+    min: undefined,
+    max: undefined
   }),
   computed: {
     mapDef() { return this.items[0] },
+    timeSelector() { return this.mapDef['time-selector'] },
     activeElements() { return this.$store.getters.activeElements },
     itemsInActiveElements() { return this.$store.getters.itemsInActiveElements },
     entities() { return this.itemsInActiveElements.filter(item => item.tag === 'entity') },
     locations() { return this.itemsInActiveElements.filter(entity => entity.coords || entity.geojson) },
     viewport() { return {height: this.$store.getters.height, width: this.$store.getters.width} },
     isHorizontal() { return this.$store.getters.layout[0] === 'h' },
-    isSelected() { return this.selected === 'map' }
+    isSelected() { return this.selected === 'map' },
     // width() { return Math.min(this.viewport.width, this.viewerWidth)},
   },
   mounted() {
     console.log(`MapViewer.mounted: height=${this.height} width=${this.width}`)
-    this.$nextTick(() => { this.createBaseMap() })
+    this.mapHeight = this.height
+    this.$nextTick(() => this.createBaseMap())
   },
   methods: {
+    rangeChange(range) {
+      this.timeRange = range
+      this.map.removeLayer(this.layers.Labels)
+      this.map.eachLayer(layer => {
+        if (layer.options.type === 'geojson' && layer.options.id && layer.options.id.indexOf('map-layer-1') === 0) {
+          this.map.removeLayer(layer)
+        }
+      })
+      this.syncLayers()
+    },
+    timeRangeFilter(feature) {
+      console.log(this.timeRange)
+      if (feature.properties[this.dateField]) {
+        const dateStrs = feature.properties[this.dateField].split(':')
+        feature.properties.startDate = this.parseDate(dateStrs[0]).getUTCFullYear()
+        feature.properties.endDate = dateStrs.length === 1 ? feature.properties.startDate : this.parseDate(dateStrs[1]).getUTCFullYear()
+        feature.properties.value = feature.properties.startDate
+        this.data.push(feature.properties)
+      }
+      if (feature.properties.startDate && this.timeRange.length === 2) {
+        return feature.properties.startDate >= this.timeRange[0] && feature.properties.endDate <= this.timeRange[1]
+      }
+      return true
+    },
     createBaseMap() {
       const t = performance.now()
       if (this.map) {
@@ -75,14 +112,25 @@ module.exports = {
         this.map = undefined
       }
       if (!this.map) {
-        this.baseLayer = this.$L.tileLayer(...baseLayers[this.mapDef.basemap || defaults.basemap])
-        this.map = this.$L.map('lmap', {
-          preferCanvas: true,
-          center: this.mapDef.center || defaults.center, 
-          zoom: this.mapDef.zoom || defaults.zoom, zoomSnap: 0.1,
-          layers: [this.baseLayer]})
-        console.log(`createBaseMap: basemap=${this.mapDef.basemap} title=${this.mapDef.title} center=${this.mapDef.center} zoom=${this.mapDef.zoom} elapsed=${Math.round(performance.now() - t)}`)
-        this.updateLayers()
+        if (this.timeSelector) {
+          if (this.timeSelector !== 'true') {
+            const initialRangeDates = this.timeSelector.split(':').map(dateStr => this.parseDate(dateStr).getUTCFullYear())
+            this.timeRange = initialRangeDates.length === 2 ? initialRangeDates : [initialRangeDates[0], initialRangeDates[0]]
+          }
+        }
+        this.$nextTick(() => {
+          const timeSelectorHeight = this.$refs.timeSelector ? this.$refs.timeSelector.clientHeight : 0
+          const basemap = this.mapDef.basemap || defaults.basemap
+          const center = this.mapDef.center || defaults.center
+          const zoom = this.mapDef.zoom || defaults.zoom
+          this.baseLayer = this.$L.tileLayer(...baseLayers[basemap])
+          this.map = this.$L.map('lmap', {
+            preferCanvas: true,
+            center, zoom, zoomSnap: 0.1,
+            layers: [this.baseLayer]})
+          console.log(`createBaseMap: height=${this.height} width=${this.width} timeSelector=${this.timeSelector !== undefined} basemap=${basemap} title=${this.mapDef.title} center=${center} zoom=${zoom} elapsed=${Math.round(performance.now() - t)}`)
+          this.updateLayers()
+        })
       }
     },
     makeMarker(latlng, props) {
@@ -108,7 +156,7 @@ module.exports = {
       this.$emit('selected-id', itemID)
     },
     cachedGeojson(def) {
-      console.log('loadGeojson', def.url || def.geojson, `cached=${this.$store.getters.geoJsonCache[def.id] !== undefined}`)
+      // console.log('loadGeojson', def.url || def.geojson, `cached=${this.$store.getters.geoJsonCache[def.id] !== undefined}`)
       if (!this.$store.getters.geoJsonCache[def.id]) {
         const cacheObj = {}
         cacheObj[def.id] = fetch(def.url || def.geojson).then(resp => resp.json())
@@ -132,30 +180,30 @@ module.exports = {
       }
     },
     loadGeojson(def, addToMap) {
+      this.geojsonIsLoading = true
+      this.dateField = def['date-field'] || this.dateField
       this.cachedGeojson(def)
       .then(data => {
         const self = this
-        let layerNum = 0
         let numFeatureLabels = 0
+        console.log('loadGeojson')
         let geojson = L.geoJson(data, {
-          // Pop Up
+          filter: this.timeRangeFilter,
           onEachFeature: function(feature, layer) {
             layer.options.id = def.id
             feature.properties.layerid = def.id
-            if (!feature.properties.id) {
-              feature.properties.id = layerNum === 0 ? def.id : `${def.id}-${layerNum}`
-            }
-            console.log(`feature: id=${feature.properties.id} layerid=${feature.properties.layerid}`)
+            const latLng = layer.feature.geometry.type === 'Polygon' || layer.feature.geometry.type === 'MultiPolygon' || layer.feature.geometry.type === 'LineString'
+              ? layer.getBounds().getCenter()
+              : layer.getLatLng()
+            feature.properties.id = feature.properties.id || `${latLng}`
+            // console.log(`feature: id=${feature.properties.id} layerid=${feature.properties.layerid}`)
             self.addEventHandlers(layer, layer.feature.properties.id)
-            if (!def.title) {
+            //if (!def.title) {
               const label = feature.properties ? feature.properties.label || feature.properties.name || feature.properties.title || feature.properties['ne:NAME'] || undefined : undefined
               if (label) {
                 numFeatureLabels += 1
                 feature.properties.label = label
-                const latLng = layer.feature.geometry.type === 'Polygon' || layer.feature.geometry.type === 'LineString'
-                  ? layer.getBounds().getCenter()
-                  : layer.getLatLng()
-                self.addPopup(feature.properties.id, label, latLng, feature.geometry.type === 'Point' ? -45 : 0)
+                self.addPopup(feature.properties.id, label, latLng, feature.geometry.type === 'Point' ? -20 : 0)
                 self.addEventHandlers(layer, layer.feature.properties.id)
                 self.active.add(feature.properties.id)
                 /*
@@ -166,7 +214,7 @@ module.exports = {
                 this.layers = _layers
                 */
               }
-            }
+            //}
             if (feature.properties.decorators) {
               const polyline = self.$L.polyline(self.$L.GeoJSON.coordsToLatLngs(feature.geometry.coordinates), {})
               const patterns = []
@@ -187,7 +235,6 @@ module.exports = {
                 const decorator = self.$L.polylineDecorator(polyline, {patterns}).addTo(self.map)
               })
             }
-            layerNum += 1
           },
           // Style
           style: function(feature) {
@@ -198,16 +245,16 @@ module.exports = {
             }
             const style = {
                 color: def['stroke'] || feature.properties['stroke'] || '#FB683F',
-                weight: parseFloat(def['stroke-width'] || feature.properties['stroke-width'] || (feature.geometry.type === 'Polygon' ? 0 : 4)),
+                weight: parseFloat(def['stroke-width'] || feature.properties['stroke-width'] || (feature.geometry.type === 'Polygon' || feature.geometry.type === 'MultiPolygon' ? 0 : 4)),
                 opacity: parseFloat(def['stroke-opacity'] || feature.properties['stroke-opacity'] || 1),                  
                 fillColor: def['fill'] || feature.properties['fill'] || '#32C125',
                 fillOpacity: parseFloat(def['fill-opacity'] || feature.properties['fill-opacity'] || 0.5),
             }
             return style
           },
-          pointToLayer: function(feature, latlng) {
-            return self.makeMarker(latlng, feature.properties)
-          }
+          //pointToLayer: function(feature, latlng) {
+          //  return self.makeMarker(latlng, feature.properties)
+          //}
         })
 
         const geojsonLabel = def.title
@@ -221,17 +268,16 @@ module.exports = {
         if (addToMap || def.active) {
           const currentLayers = new Set()
           this.map.eachLayer(layer => {if (layer.options.id) currentLayers.add(layer.options.id)})
-          console.log('currentLayers', currentLayers)
-          console.log('geojson', geojson.options.id)
-          this.map.eachLayer(layer => console.log('layer', layer.options.id))
+          // this.map.eachLayer(layer => console.log('layer', layer.options.id))
           //if (!currentLayers.has(geojson.options.id)) {
-            console.log('adding geojson.layer', geojson.options.id)
+            // console.log('adding geojson.layer', geojson.options.id)
             geojson.addTo(this.map)
           //}
         }
 
         if (numFeatureLabels === 0) {
-          this.addPopup(def.id, geojsonLabel, geojson.getBounds().getCenter())
+          const latLng = geojson.getBounds().getCenter()
+          this.addPopup(`${latLng}`, geojsonLabel, latLng)
           this.addEventHandlers(geojson, def.id)
         }
 
@@ -250,6 +296,8 @@ module.exports = {
         this.layers = _layers
 
         this.map.flyTo(this.mapDef.center || defaults.center, this.mapDef.zoom || defaults.zoom)
+        
+        this.geojsonIsLoading = false
 
         return geojson
       })
@@ -264,7 +312,8 @@ module.exports = {
       this.locations.filter(location => location.coords && !this.useGeojson(location)).forEach((location) => {
         const marker = this.makeMarker(location.coords[0], location)
         const markerLabel = location.title || location.label
-        this.addPopup(location.eid, markerLabel, marker.getLatLng(), -45)
+        const latLng = marker.getLatLng()
+        this.addPopup(`${latLng}`, markerLabel, latLng, -45)
         this.addEventHandlers(marker, location.eid)
         markers.push(marker)
         const mll = marker.getLatLng()
@@ -275,7 +324,6 @@ module.exports = {
     },
 
     syncLayers() {
-      console.log('syncLayers')
       const currentLayerIds = new Set(this.mapDef.layers.map(def => def.id))
       const _layers = {}
       const _active = new Set()
@@ -287,7 +335,6 @@ module.exports = {
               _layers[layer.options.label] = layer
               _active.add(layer.options.id)
             } else {
-              console.log('remove', layer.options.id)
               this.map.removeLayer(layer)
             }
           }
@@ -298,7 +345,6 @@ module.exports = {
         let layer
         const layerLabel = layerDef.title || layerDef.id
         if (!_layers[layerLabel]) {
-          console.log('add', layerDef.id, layerLabel)
           if (layerDef.type === 'geojson') {
             _active.add(layerDef.id)
             this.loadGeojson(layerDef)
@@ -343,9 +389,23 @@ module.exports = {
       if (this.map) {
         this.syncLayers()
       }
+    },
+    mapChanged(current, prior) {
+      return false
+      // return !prior || current.basemap !== prior.basemap || current['time-selector'] !== prior['time-selector']
     }
   },
   watch: {
+    geojsonIsLoading: {
+      handler: function (isLoading, prior) {
+        if (isLoading) {
+          this.data = []
+        } else {
+          this.timeData = this.data
+        }
+      },
+      immediate: false
+    },
     hoverItemID: {
       handler: function (itemID, prior) {
         // console.log(`hoverItemID: value=${itemID} prior=${prior}`)
@@ -381,7 +441,6 @@ module.exports = {
     selectedItemID: {
       handler: function (itemID, prior) {
         const layer = Object.values(this.layers).find(layer => layer.options.id === (itemID || prior))
-        console.log(`MapViewer.selectedItemID: value=${itemID} prior=${prior}`)
       },
       immediate: true
     },
@@ -426,13 +485,17 @@ module.exports = {
     },
     height: {
       handler: function () {
+        const timeSelectorHeight = this.$refs.timeSelector ? this.$refs.timeSelector.clientHeight : 0
+        this.mapHeight = this.height - timeSelectorHeight
+        // console.log(`height=${this.height} timeSelectorHeight=${timeSelectorHeight} mapHeight=${this.mapHeight}`)
         const lmap = document.getElementById('lmap')
         if (lmap) {
-          lmap.style.height = `${this.height}px`
-          console.log(`height=${this.height} viewport.height=${this.viewport.height} lmap=${lmap.style.height}`)
+          lmap.style.height = `${this.mapHeight}px`
+          // console.log(`lmap.style.height=${lmap.style.height}`)
+          this.map.invalidateSize()
         }
       },
-      immediate: true
+      immediate: false
     },
     activeElements: {
       handler: function () {
@@ -442,16 +505,29 @@ module.exports = {
     },
     mapDef: {
       handler: function (mapDef, prior) {
-        console.log('mapDef', this.mapDef)
         const lmap = document.getElementById('lmap')
         if (lmap) {
           if (mapDef) {
-            if (this.map && mapDef && !prior || mapDef.basemap === prior.basemap) {
-              this.map.flyTo(mapDef.center || defaults.center, mapDef.zoom || defaults.zoom)
+            if (this.timeSelector && this.timeSelector !== 'true') {
+              const initialRangeDates = this.timeSelector.split(':').map(dateStr => this.parseDate(dateStr).getUTCFullYear())
+              this.timeRange = initialRangeDates.length === 2 ? initialRangeDates : [initialRangeDates[0], initialRangeDates[0]]
             } else {
-              this.createBaseMap()
+              this.timeRange = []
             }
-            this.$refs.mapWrapper.style.display = 'block'
+            this.$nextTick(() => {
+              const timeSelectorHeight = this.$refs.timeSelector ? this.$refs.timeSelector.clientHeight : 0
+              console.log(`mapDef: timeSelector=${this.timeSelector !== undefined} timeSelectorHeight=${timeSelectorHeight} timeRange=${this.timeRange}`)
+              this.mapHeight = this.height - timeSelectorHeight
+              const lmap = document.getElementById('lmap')
+              lmap.style.height = `${this.mapHeight}px`
+              this.map.invalidateSize()
+              if (!this.map || this.mapChanged(mapDef, prior)) {
+                this.createBaseMap()
+              } else {
+                this.map.flyTo(mapDef.center || defaults.center, mapDef.zoom || defaults.zoom)
+              }
+              this.$refs.mapWrapper.style.display = 'block'
+            })
           } else {
             this.$refs.mapWrapper.style.display = 'none'
           }

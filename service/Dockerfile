@@ -9,13 +9,14 @@ RUN set -e; \
     rm -rf /var/tmp/* /tmp/* /var/lib/apt/lists/*
 
 RUN set -e; \
-    pip install sqlitedict flask requests uwsgi Markdown pygments pymdown-extensions bs4 html5 python-slugify rdflib rdflib-jsonld PyLD expiringdict google-cloud google-auth google-cloud-storage 
+    pip install sqlitedict flask requests uwsgi Markdown pygments pymdown-extensions markdown markdown-captions bs4 html5 python-slugify rdflib rdflib-jsonld PyLD expiringdict google-cloud google-auth google-cloud-storage 
 
 WORKDIR /usr/src/app
 
 ADD src src
 ADD mappings mappings
 ADD index.html .
+ADD gh-token .
 COPY favicon.ico src/static/favicon.ico
 
 ENV PORT 8080

@@ -16,16 +16,16 @@ import VModal from 'vue-js-modal'
 
 // cytoscape dependencies
  
+import VueSlider from 'vue-slider-component'
+import 'vue-slider-component/theme/antd.css'
 import 'leaflet'
 import 'leaflet-polylinedecorator'
-
-// import mirador from '../assets/js/mirador.min.js'
 
 // import 'scrollmagic/scrollmagic/uncompressed/plugins/debug.addIndicators.js'
 import 'leaflet.control.opacity/dist/L.Control.Opacity.css'
 import 'leaflet.control.opacity'
 import '../assets/styles/main.css'
-import { parseQueryString, prepItems, elemIdPath, itemsInElements, groupItems } from './utils'
+import { parseQueryString, prepItems, elemIdPath, itemsInElements, groupItems, parseDate, eqSet, delimitedStringToObjArray } from './utils'
 
 import '../assets/js/leaflet-fa-markers.js'
 import '../assets/js/fontawesome-pro.min.js'
@@ -37,46 +37,55 @@ import VueAnalytics from 'vue-analytics'
 // Default viewer components
 import HorizontalViewer from './components/HorizontalViewer'
 import VerticalViewer from './components/VerticalViewer'
+import Viewer from './components/Viewer'
 import Essay from './components/Essay'
 import EntityInfoboxDialog from './components/EntityInfoboxDialog'
 
+import _ from 'lodash'
+
 import MobileDetect from 'mobile-detect'
+
+const VERSION = '0.7.23'
 
 console.log(window.location.hostname)
 const componentsBaseURL = window.location.hostname === 'localhost' ? '' : 'https://jstor-labs.github.io/visual-essays'
 
+const customScripts = [
+  'https://cdnjs.cloudflare.com/ajax/libs/openseadragon/2.4.2/openseadragon.min.js',
+  'https://storiiies.cogapp.com/assets/demos/viewer/js/shortcode.js'  // for Storiiies
+]
+const customStyles = []
+
 const defaultComponents = [
-  { name: 'mapViewer', src: `${componentsBaseURL}/components/MapViewer.vue`, selectors: ['tag:map'], 'icon': 'fa-map-marker-alt', 'label': 'Map' },
-  { name: 'image', src: `${componentsBaseURL}/components/ImageViewer/index.vue`, selectors: ['tag:image'], 'icon': 'fa-file-image', 'label': 'Images' },
-  { name: 'defaultImageViewer', src: `${componentsBaseURL}/components/ImageViewer/DefaultImageViewer.vue` },
+  { name: 'siteHeader', src: `${componentsBaseURL}/components/Header.vue` },
+  { name: 'mapViewer', src: `${componentsBaseURL}/components/MapViewer.vue`, selectors: ['tag:map'], icon: 'fa-map-marker-alt', label: 'Map' },
+  { name: 'imageViewer', src: `${componentsBaseURL}/components/ImageViewer/index.vue`, selectors: ['tag:image'], icon: 'fa-file-image', label: 'Images' },
+  { name: 'staticImageViewer', src: `${componentsBaseURL}/components/ImageViewer/StaticImageViewer.vue` },
   { name: 'miradorImageViewer', src: `${componentsBaseURL}/components/ImageViewer/MiradorImageViewer.vue` },
+  { name: 'openSeadragonImageViewer', src: `${componentsBaseURL}/components/ImageViewer/OpenSeadragonImageViewer.vue` },
   { name: 'imageViewerModal', src: `${componentsBaseURL}/components/ImageViewer/ImageViewerModal.vue` },
-  { name: 'videoPlayer', src: `${componentsBaseURL}/components/VideoPlayer.vue`, selectors: ['tag:video'], 'icon': 'fa-video', 'label': 'Videos' },
+  { name: 'videoPlayer', src: `${componentsBaseURL}/components/VideoPlayer.vue`, selectors: ['tag:video'], icon: 'fa-video', label: 'Videos' },
+  { name: 'storiiiesViewer', src: `${componentsBaseURL}/components/StoriiiesViewer.vue`, selectors: ['tag:storiiies'], icon: 'fa-book', label: 'Storiiies Viewer from main.js' },
+  { name: 'plantSpecimenViewer', src: `${componentsBaseURL}/components/PlantSpecimenViewer.vue`, selectors: ['tag:plant-specimen'], icon: 'fa-seedling', label: 'Plant Specimens' },
+  { name: 'visNetworkViewer', src: `${componentsBaseURL}/components/VisNetworkViewer.vue`, selectors: ['tag:vis-network'], icon: 'fa-chart-network', label: 'Vis Network' },
+  { name: 'timeSelector', src: `${componentsBaseURL}/components/TimeSelector.vue` },
   // { name: 'person', src: `${componentsBaseURL}/components/EntityViewer.vue`, selectors: ['category:person'], 'icon': 'fa-user', 'label': 'People' },
   // { name: 'entity', src: `${componentsBaseURL}/components/EntityViewer.vue`, selectors: ['tag:entity'], 'icon': 'fa-brackets-curly', 'label': 'Entities' },
   // { name: 'network', src: `${componentsBaseURL}/components/Network.vue`, selectors: ['tag:network'], 'icon': 'fa-chart-network', 'label': 'Networks' },
-  // { name: 'plant-specimen', src: `${componentsBaseURL}/components/PlantSpecimenViewer.vue`, selectors: ['tag:plant-specimen'], 'icon': 'fa-seedling', 'label': 'Plant Specimens' },
   { name: 'essay', component: Essay },
+  { name: 'viewer', component: Viewer },
   { name: 'horizontalViewer', component: HorizontalViewer },
   { name: 'verticalViewer', component: VerticalViewer },
   { name: 'entityInfoboxDialog', component: EntityInfoboxDialog },
-  //{ name: 'cardsImageViewer', src: `${componentsBaseURL}/components/ImageViewer/CardsImageViewer.vue` },
-  //{ name: 'hiresImageViewer', src: `${componentsBaseURL}/components/ImageViewer/HiresImageViewer.vue` },
-  { name: 'entityInfobox', src: `${componentsBaseURL}/components/EntityInfobox.vue` },
-
-  { name: 'bfsNetwork', src: `${componentsBaseURL}/components/BFSNetwork.vue`, selectors: ['tag:bfsnetwork'], 'icon': 'fa-chart-network', 'label': 'BFS Network' },
-  { name: 'cytoNetwork', src: `${componentsBaseURL}/components/Cytoscape.vue`, selectors: ['tag:cytonetwork'], 'icon': 'fa-chart-network', 'label': 'Cytoscape Network' },
-  { name: 'visNetwork', src: `${componentsBaseURL}/components/VisNetwork.vue`, selectors: ['tag:visnetwork'], 'icon': 'fa-chart-network', 'label': 'Vis Network' },
-
+  { name: 'entityInfobox', src: `${componentsBaseURL}/components/EntityInfobox.vue` }
 ]
 
 const components = {}
 defaultComponents.forEach(component => components[component.name] = component)
 
-const VERSION = '0.7.5'
-
 console.log(`visual-essays js lib ${VERSION}`)
 
+Vue.component('VueSlider', VueSlider)
 Vue.component('lingallery', Lingallery)
 
 Vue.mixin({
@@ -89,6 +98,32 @@ Vue.mixin({
     groups() { return groupItems(itemsInElements(elemIdPath(this.activeElement), this.allItems), store.getters.componentSelectors) },
     // selectedItemID () { return store.getters.selectedItemID }
     // visualizerIsOpen() { return store.getters.visualizerIsOpen }
+  },
+  methods: {
+    parseDate, eqSet, delimitedStringToObjArray,
+    load(url, callback) {
+      let e
+      if (url.split('.').pop() === 'js') {
+          e = document.createElement('script')
+          e.src = url
+          e.type='text/javascript'
+      } else {
+          e = document.createElement('link')
+          e.href = url
+          e.rel='stylesheet'
+      }
+      e.addEventListener('load', callback)
+      document.getElementsByTagName('head')[0].appendChild(e)
+    },
+    loadDependencies(dependencies, i, callback) {
+      this.load(dependencies[i], () => {
+          if (i < dependencies.length-1) {
+              this.loadDependencies(dependencies, i+1, callback) 
+          } else {
+              callback()
+          }
+      })
+    }
   }
 })
 
@@ -121,21 +156,29 @@ function resizeend() {
   }
 }
 
-const customScripts = new Set()
-const customStyles = new Set()
-
 // Site components
 const getSiteConfig = async () => {
-  const response = await fetch('/config')
+  let configUrl = '/config'
+  const hostname = window.location.hostname
+  console.log(`main.js.hostname=${hostname}`)
+  if (hostname === 'localhost' || hostname === 'visual-essays.app') {
+    const pathElems = window.location.pathname.replace(/\/essay/, '').split('/').filter(pathElem => pathElem !== '')
+    console.log('main.js.pathElems', pathElems)
+    if (pathElems.length >= 2) {
+      configUrl += `/${pathElems[0]}/${pathElems[1]}`
+    }
+  }
+  console.log(`main.js.getSiteConfig=${configUrl}`)
+  const response = await fetch(configUrl)
   const siteConfig = await response.json()
   if (siteConfig.components) {
     siteConfig.components.forEach(cfg => {
       if (cfg.dependencies) {
         cfg.dependencies.forEach(url =>  {
           if (url.slice(url.length - 4) === '.css') {
-            customStyles.add(url)
+            if (customStyles.indexOf(url) === -1) customStyles.push(url)
           } else {
-            customScripts.add(url)
+            if (customScripts.indexOf(url) === -1) customScripts.push(url)
           }
         })
       }
@@ -160,6 +203,7 @@ function initApp() {
   document.querySelectorAll('script[type="application/ld+json"]').forEach((scr) => {
     eval(scr.text)
   })
+  console.log(`window.data=${window.data.length}`)
 
   // Essay components
   window.data.filter(item => item.tag === 'component').forEach(customComponent => {
@@ -170,9 +214,9 @@ function initApp() {
       customComponent.dependencies = customComponent.dependencies.split('|')
       customComponent.dependencies.forEach(url => {
         if (url.slice(url.length - 4) === '.css') {
-          customStyles.add(url)
+          if (customStyles.indexOf(url) === -1) customStyles.push(url)
         } else {
-          customScripts.add(url)
+          if (customScripts.indexOf(url) === -1) customScripts.push(url)
         }
       })
     }
@@ -238,6 +282,7 @@ function initApp() {
 
   const qargs = parseQueryString()
   const essayConfig = vm.$store.getters.items.find(item => item.tag === 'config') || {}
+  console.log(essayConfig)
   vm.$store.dispatch('setLayout', isMobile ? 'hc' : (qargs.layout || essayConfig.layout || 'hc' ))
   vm.$store.dispatch('setShowBanner', window.app === undefined && !(qargs.nobanner === 'true' || qargs.nobanner === ''))
   vm.$store.dispatch('setContext', qargs.context || essayConfig.context)
@@ -291,6 +336,7 @@ const waitForContent = () => {
   const essayElem = document.getElementById('essay')
   if (!window._essay && essayElem && essayElem.innerText.length > 0) {
     window._essay = essayElem.dataset.name
+    console.log(`essay=${window._essay}`)
   }
   if (current != window._essay) {
     current = window._essay

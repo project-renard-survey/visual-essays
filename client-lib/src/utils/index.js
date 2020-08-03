@@ -96,7 +96,7 @@ export function groupItems(items, componentSelectors) {
   const exclude = ['essay']
   const groups = {}
   if (componentSelectors && componentSelectors.tag && componentSelectors.tag.map) {
-    const maps = items.filter(item => item.tag === 'map')  
+    const maps = items.filter(item => item.tag === 'map')
     let selectedMap = maps.length > 0 ? { ...maps[0], ...{ layers: [] } } : undefined
     if (selectedMap) {
       groups.mapViewer = { ...componentSelectors.tag.map[0], ...{ items: [selectedMap] } }
@@ -118,6 +118,7 @@ export function groupItems(items, componentSelectors) {
         }
       }
     })
+  console.log('groups', groups)
   return groups
 }
 
@@ -135,4 +136,70 @@ export function throttle(callback, interval) {
     callback.apply(this, args)
     setTimeout(() => enableCall = true, interval)
   }
+}
+
+export function parseDate(ds) {
+  let date
+  if (Number.isInteger(ds)) {
+    date = new Date(`${ds}-01-01T00:00:00Z`)
+  } else {
+    const split = ds.split('-')
+    if (split.length === 1) {
+      const yr = split[0].toUpperCase().replace(/[\. ]/,'')
+      let yrAsInt
+      if (yr.indexOf('BC') > 0) { // covers both 'BC' and 'BCE' eras
+        yrAsInt = -Math.abs(parseInt(yr.slice(0,yr.indexOf('BCE'))))
+      } else if (yr.indexOf('CE') > 0 || yr.indexOf('AD') > 0) {
+        yrAsInt = parseInt(yr.slice(0,yr.indexOf('CE')))
+      } else {
+        yrAsInt = parseInt(ds)
+      }
+      if (yrAsInt >= 1000) {
+        date = new Date(`${yrAsInt}-01-01T00:00:00Z`)
+      } else {
+        date = new Date(yrAsInt, 0, 0)
+        date.setUTCFullYear(yrAsInt)
+      }
+    } else if (split.length === 2) {
+      date = new Date(`${split[0]}-${split[1]}-01T00:00:00Z`)
+    } else if (split.length === 3) {
+      date = new Date(`${ds}T00:00:00Z`)
+    }
+  }
+  return date
+}
+
+export function delimitedStringToObjArray(delimitedData, delimiter) {
+  delimiter = delimiter || `\t`
+  const objArray = []
+  const lines = delimitedData.split('\n').filter(line => line.trim() !== '')
+  if (lines.length > 1) {
+    const keys = lines[0].split(delimiter).map(key => key.trim())
+    lines.slice(1).forEach(line => {
+      let obj = {}
+      line.split(delimiter)
+      .map(value => value.trim())
+      .forEach((value, i) => {
+        let rawKey = keys[i].split('.')
+        let key = rawKey[0]
+        let prop = rawKey.length === 2 ? rawKey[1] : 'id'
+        if (!obj[key]) obj[key] = {}
+        if (value || prop === 'id') {
+          obj[key][prop] = value
+        }
+      })      
+      objArray.push(obj)
+    })
+    let assignedId = 0
+    let labels = {}
+    objArray.forEach(obj => {
+      Object.values(obj).forEach(child => {
+        if (child.id === '' && child.label) {
+          if (!labels[child.label]) labels[child.label] = ++assignedId
+          child.id = labels[child.label]
+        }
+      })
+    })
+  }
+  return objArray
 }

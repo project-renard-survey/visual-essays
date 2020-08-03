@@ -97,6 +97,7 @@ sparql_template = '''
     PREFIX jp: <http://kg.jstor.org/prop/>
     PREFIX jps: <http://kg.jstor.org/prop/statement/>
     PREFIX jpq: <http://kg.jstor.org/prop/qualifier/>
+    PREFIX wd: <http://www.wikidata.org/entity/>
     PREFIX wdt: <http://www.wikidata.org/prop/direct/>
 
     CONSTRUCT {
@@ -126,7 +127,7 @@ sparql_template = '''
     } WHERE {
 
         ?specimen jwdt:P17 jwd:Q14316 ;
-                jwdt:P501 '<TAXON NAME>' ;
+                <SELECTOR>
                 schema:description ?description ;
                 jwdt:P1106 ?jstorPlantsId ;
                 jwdt:P1661 ?specimenType ;
@@ -163,7 +164,7 @@ sparql_template = '''
     }
 '''
 
-def _get_manifest(specimen, image_url):
+def _get_manifest(specimen, image_url, preload=False):
     logger.debug(f'getManifest {specimen}')
     if 'manifest' not in specimen:
         defaults = {
@@ -182,18 +183,25 @@ def _get_manifest(specimen, image_url):
         }]
         }
         resp = requests.post(
-            'https://tripleeyeeff-atjcn6za6q-uc.a.run.app/presentation/create',
+            'https://iiif.visual-essays.app/presentation/create',
             headers={'Content-type': 'application/json'},
             json=manifest
         )
         manifest = resp.json()
         if '@id' in manifest:
             specimen['manifest'] = manifest['@id']
+            if preload:
+                resp = requests.post(
+                    'https://iiif.visual-essays.app/images/preload',
+                    headers={'Content-type': 'application/json'},
+                    json={'url': image_url}
+                )
+                logger.info(f'preload {image_url} {resp.status_code}')
     # logger.info(json.dumps(specimen, indent=2))
     return specimen
 
 _manifests_cache = {}
-def _get_manifests(specimens):
+def _get_manifests(specimens, preload=False):
     with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
         futures = {}
         for specimen in specimens:
@@ -202,8 +210,7 @@ def _get_manifests(specimens):
             if image_url in _manifests_cache:
                 specimen['manifest'] = _manifests_cache[image_url]
                 continue
-            logger.info(specimen)
-            futures[executor.submit(_get_manifest, specimen, image_url)] = specimen['id']
+            futures[executor.submit(_get_manifest, specimen, image_url, preload)] = image_url
 
         for future in concurrent.futures.as_completed(futures):
             image_url = futures[future]
@@ -232,9 +239,15 @@ def sort_specimens(specimens, **kwargs):
             sorted_specimens += sort_by_date(by_type[specimen_type])
     return sorted_specimens
 
-def get_specimens(taxon_name, **kwargs):
-    logger.info(f'get_specimens: taxon_name={taxon_name} max={kwargs.get("max")}')
-    sparql = sparql_template.replace('<TAXON NAME>', taxon_name)
+def get_specimens(taxon_name=None, gpid=None, wdid=None, preload=False, **kwargs):
+    logger.info(f'get_specimens: taxon_name={taxon_name} max={kwargs.get("max")} preload={preload} args={kwargs}')
+    if taxon_name:
+        sparql = sparql_template.replace('<SELECTOR>', f'jwdt:P501 "{taxon_name}" ;')
+    elif gpid:
+        sparql = sparql_template.replace('<SELECTOR>', f'jwdt:P1106 "{gpid}" ;')
+    elif wdid:
+        sparql = sparql_template.replace('<SELECTOR>', f'jwdt:P1660 {wdid} ;')
+
     data = {'taxonName': taxon_name, 'specimens': []}
     for _ in range(2):
         resp = requests.post(
@@ -280,10 +293,9 @@ def get_specimens(taxon_name, **kwargs):
                     specimen['locationCollected']['geojson'] = f'https://data.whosonfirst.org/{"/".join(wof_parts)}/{wof}.geojson'
                 specimen['images'] = [{'url': img['id'], 'type': img['imgSize']} for img in specimen.get('images', [])]
             data['specimens'] = sort_specimens(data['specimens'], **kwargs)
-            if 'max' in kwargs:
-                data['specimens'] = data['specimens'][:int(kwargs['max'])]
+            data['specimens'] = data['specimens'][:int(kwargs.get('max', 5))]
             break
-    _get_manifests(data['specimens'])
+    _get_manifests(data['specimens'], preload)
     return data
 
 def usage():

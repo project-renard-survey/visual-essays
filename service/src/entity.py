@@ -85,6 +85,7 @@ class KnowledgeGraph(object):
         refresh = str(kwargs.pop('refresh', 'false')).lower() in ('', 'true')
 
         cache_key = f'{uri}-{project}'
+        logger.info(f'entity: cache_key={cache_key} refresh={refresh} raw={raw}')
         entity = self.cache.get(cache_key) if not refresh and not raw else None
         if entity:
             entity['fromCache'] = True
@@ -354,13 +355,17 @@ class KnowledgeGraph(object):
                         'extract': extract.text.strip()
                     }
             else:
-                logger.info(summary_url)
-                md = requests.get(summary_url).content.decode('utf-8')
-                html = markdown_parser.markdown(md, output_format='html5')
-                soup = BeautifulSoup(html, 'html5lib')
-                paragraphs = ['\n'.join(p.contents) for p in soup.find_all('p')]
-                logger.info('\f'.join(paragraphs))
-                entity['summary info'] = {'extract_html': '<br><br>'.join(paragraphs)}
+                try:
+                    logger.info(f'summary_url={summary_url}')
+                    md = requests.get(summary_url).content.decode('utf-8')
+                    html = markdown_parser.markdown(md, output_format='html5')
+                    soup = BeautifulSoup(html, 'html5lib')
+                    paragraphs = []
+                    paragraphs = [p.text for p in soup.find_all('p')]
+                    logger.info('\f'.join(paragraphs))
+                    entity['summary info'] = {'extract_html': '<br><br>'.join(paragraphs)}
+                except:
+                    logger.warning(traceback.format_exc())
 
     def _find_ids(self, entity):
         ids = set()

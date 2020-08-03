@@ -1,5 +1,5 @@
 <template>
-  <modal name="mirador" height="100%" width="100%">
+  <modal name="image-viewer-modal" height="100%" width="100%">
     <v-btn color="red lighten-2" @click="close">Close</v-btn>
     <mirador-image-viewer :items="items" :height="height" :width="width"/>
   </modal>
@@ -16,27 +16,30 @@ module.exports = {
   computed: {
     height() { return Math.max(document.documentElement.clientHeight, window.innerHeight * 0.8) - 40 },
     width() { return Math.max(document.documentElement.clientWidth, window.innerWidth * 0.8) },
+    selectedImageID() { return this.$store.getters.selectedImageID }
   },
   methods: {
     close() {
-      this.$modal.hide('mirador')
+      this.$modal.hide('image-viewer-modal')
+      this.$store.dispatch('setSelectedImageID', null)
+      this.items = []
     },
-    getItems() {
-      console.log(this.groups)
-      if (this.groups.image) {
-        this.items = this.groups.image.items
-      } else if (this.groups.plantSpecimen) {
-        console.log('plantSpecimens', this.groups.plantSpecimen)
-        this.items = this.groups.plantSpecimen.items
+    getItems(selected) {
+      if (this.groups.imageViewer) {
+        this.items = this.groups.imageViewer.items.filter(item => item.id === selected)
+      } else if (this.groups.plantSpecimenViewer) {
+        this.items = this.groups.plantSpecimenViewer.items
           .filter(item => item.specimensMetadata)
-          .map(item => item.specimensMetadata.specimens[0])
+          .map(item => item.specimensMetadata.specimens.find(specimen => specimen.id === selected))
       }
     }
   },
   watch: {
-    groups: {
-      handler: function () {
-        this.getItems()
+    selectedImageID: {
+      handler: function (selected) {
+        if (selected) {
+          this.getItems(selected)
+        }
       },
       immediate: true
     }

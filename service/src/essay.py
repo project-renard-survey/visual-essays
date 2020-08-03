@@ -15,7 +15,8 @@ import json
 import getopt
 import sys
 import hashlib
-from urllib.parse import quote
+import traceback
+from urllib.parse import quote, urlparse
 from time import time as now
 
 from bs4 import BeautifulSoup
@@ -34,6 +35,28 @@ import concurrent.futures
 SPARQL_DIR = os.path.join(BASE_DIR, 'sparql')
 
 DEFAULT_SITE = 'https://kg.jstor.org'
+
+STYLESHEETS = {
+    'index':
+        '''
+        #essay p img { float: left; padding-right: 12px; width: 150px; }
+        #essay p::after { content: ""; clear: both; display: table; }
+        #essay p {font-size: 1.3rem; line-height: 1.3rem; padding: 12px;}
+        #essay p a {color: #800000 !important; font-size: 1.4rem; padding-right: 6px; }
+        ''',
+    'article': 
+        '''
+        p { font-size: 1.3rem; }
+        figure { max-width: 40%; font-weight: bold; font-size: 1.0rem; text-align: center; margin: 0 12px 12px 0; }
+        figcaption { padding: 6px; line-height: 1.1rem; }
+        .left { float: left; margin: 0 18px 12px 0; }
+        .right { float: right; margin: 0 0 12px 18px; }
+        .dropshadow { box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19); }
+        .border { border:1px solid #aaa; }
+        h1, h2, h3, h4, figure { content: ""; display: table; clear: both; }
+        br { clear: both; }
+        '''
+}
 
 def _is_empty(elem):
     child_images = [c for c in elem.children if c.name == 'img']
@@ -66,6 +89,13 @@ class Essay(object):
         self._add_heading_ids()
         self._get_manifests()
         self._add_data()
+        self.style = 'default'
+        for item in self.markup.values():
+            if item.get('tag') == 'config' and 'style' in item:
+                self.style = item['style']
+                break
+        if self.style in STYLESHEETS:
+            self.add_stylesheet(STYLESHEETS[self.style])
         # logger.info(f'{round(now()-st,3)}: phase 3')
 
     def _remove_empty_paragraphs(self):
@@ -235,13 +265,13 @@ class Essay(object):
 
             elif  tag == 'image':
                 try:
-                    if attrs.get('region'):
-                        attrs['region'] = [int(c.strip()) for c in attrs['region'].split(',')]
+                    #if attrs.get('region'):
+                    #    attrs['region'] = [int(c.strip()) for c in attrs['region'].split(',')]
                     for attr in ('url', 'thumbnail', 'hires'):
                         if attr in attrs and not attrs[attr].startswith('http'):
                             attrs[attr] = f'{self.baseurl}/{attrs[attr][1:] if attrs[attr][0] == "/" else attrs[attr]}'
                 except:
-                    del attrs['region']
+                    pass # del attrs['region']
 
             attrs['tagged_in'] = []
 
@@ -266,11 +296,10 @@ class Essay(object):
         # logger.info(json.dumps(ve_markup, indent=2))
         return ve_markup
 
-    def add_stylesheet(self, **kwargs):
-        if 'style' in kwargs:
-            if not self._soup.html.head.style:
-                self._soup.html.head.append(self._soup.new_tag('style'))
-            self._soup.html.head.style.string = kwargs.pop('style')
+    def add_stylesheet(self, stylesheet):
+        if not self._soup.html.head.style:
+            self._soup.html.head.append(self._soup.new_tag('style'))
+        self._soup.html.head.style.string = stylesheet
 
     def _add_data(self):
         data = self._soup.new_tag('script')
@@ -436,6 +465,7 @@ class Essay(object):
                 return _jsonld
             logger.info(f'_get_entity_data: resp_code={resp.status_code} msg=${resp.text}')
 
+    '''
     def _get_manifest(self, item):
         logger.info(f'getManifest {item}')
         if 'manifest' not in item:
@@ -461,7 +491,7 @@ class Essay(object):
                         '@type': 'sc:AnnotationList'
                     }]
             resp = requests.post(
-                'https://tripleeyeeff-atjcn6za6q-uc.a.run.app/presentation/create',
+                'iiif.visual-essays.app/presentation/create',
                 headers={'Content-type': 'application/json'},
                 json=manifest
             )
@@ -469,19 +499,154 @@ class Essay(object):
             
             #if 'otherContent' in manifest['sequences'][0]['canvases'][0]:
             #    item['annotations'] = f'source={item["annotations"]}&manifest='
-            # logger.info(json.dumps(manifest, indent=2))
+            logger.info(json.dumps(manifest, indent=2))
             if '@id' in manifest:
                 item['manifest'] = manifest['@id']
         logger.info(json.dumps(item, indent=2))
         return item
+    '''
+
+    def _create_manifest(self, item):
+        logger.debug(f'_create_manifest {item}')
+        manifest_defaults = {
+            'canvas': { 'height': 3000, 'width': 3000 },
+            'image': { 'region': 'full', 'size': '1000,', 'rotation': '0' }
+        }
+        manifest = {
+            '@context': 'http://iiif.io/api/presentation/2/context.json',
+            'sequences': [{
+                'canvases': [{**manifest_defaults['canvas'], **{
+                    'images': [{**manifest_defaults['image'], **{
+                        'url': item['url']
+                    }}]
+                }}]
+            }]
+        }
+        # add optional properties
+        label = item.get('label')
+        if not label:
+            label = item.get('title')
+        if not label:
+            label = item.get('description')
+        if label:
+            manifest['label'] = label
+            manifest['sequences'][0]['canvases'][0]['label'] = label
+        metadata = dict([(k,v) for k,v in item.items() if v and k in ('attribution', 'date', 'description', 'license', 'logo', 'rights')])
+        metadata['source'] = item['url']
+        metadata['version'] = '2'
+
+        for fld in ('attribution', 'description', 'license', 'logo'):
+            if fld in metadata:
+                manifest[fld] = metadata.get(fld)
+        if metadata:
+            manifest['metadata'] = [{'label': k, 'value': v} for k,v in metadata.items()]
+        if 'annotations' in item:
+            manifest['sequences'][0]['canvases'][0]['otherContent'] = [{
+                '@id': item['annotations'],
+                '@type': 'sc:AnnotationList'
+            }]
+        resp = requests.post(
+            'https://iiif.visual-essays.app/presentation/create',
+            headers={'Content-type': 'application/json'},
+            json=manifest
+        )
+        logger.info(f'{item["id"]} {resp.status_code}')
+        if resp.status_code == 200:
+            manifest = resp.json()
+            if '@id' in manifest:
+                item['manifest'] = manifest['@id']
+                if '@type' not in manifest:
+                    manifest = requests.get(item['manifest'], headers={'Content-type': 'application/json'}).json()
+        else:
+            logger.info(f'{item["id"]} {resp.status_code} {item["url"]}')
+            manifest = None
+        return resp.status_code, manifest
+
+    def _urls_from_image_info(self, url):
+        if url[-1] == '/':
+            url = url[:-1]
+        if not url.endswith('info.json'):
+            url += '/info.json'
+        resp = requests.get(url, headers={'Content-type': 'application/json'})
+        static_url = None
+        iiif_url = None
+        if resp.status_code == 200:
+            try:
+                info_json = resp.json()
+                logger.debug(json.dumps(info_json, indent=2))
+                iiif_url = info_json["@id"]
+                fmt = 'jpg'
+                for profile in info_json.get('profile', []):
+                    if isinstance(profile, dict) and 'formats' in profile:
+                        if 'jpg' in profile['formats'] or 'jpeg' in profile['formats'] or 'image/jpeg' in profile['formats']:
+                            fmt = 'jpg'
+                        else:
+                            fmt = profile['formats'][0].split('/')[-1]
+                    break
+                static_url = f'{info_json["@id"]}/full/full/0/default.{fmt}'
+            except:
+                logger.warning(traceback.format_exc())
+                logger.warning(url)
+        return iiif_url, static_url
+
+    def _make_manifest(self, item):
+        logger.debug(f'_make_manifest {item}')
+        manifest = None
+        url = None
+        for fld in ('url', 'src', 'alt-source', 'source'):
+            if fld in item:
+                url = item[fld]
+                break
+        if url:
+            parsed = urlparse(item[fld])
+            if '/blob/master' in parsed.path:
+                path_elems = parsed.path[1:].replace('/blob/master', '').split('/')
+                gh_acct = path_elems[0]
+                gh_repo = path_elems[1]
+                path = '/'.join(path_elems[2:])
+                url = f'https://raw.githubusercontent.com/{gh_acct}/{gh_repo}/master/{path}'
+            item['url'] = url
+        
+            status_code, manifest = self._create_manifest(item)
+            if status_code == 404:
+                logger.debug(f'image not found: {item["url"]}')
+                # TODO: Create manifest from image info.json directly rather than getting a static image link
+                '''
+                iiif_url, static_url = self._urls_from_image_info(item['url'])
+                logger.info(f'_urls_from_image_info: iiif_url={iiif_url} static_url={static_url}')
+                if static_url:
+                    item['url'] = static_url
+                    status_code, manifest = self._create_manifest(item)
+                else:
+                    del item['url']
+                '''
+        return manifest
+
+    def _get_manifest(self, item):
+        logger.debug(f'_get_manifest {item}')
+        if 'manifest' in item:
+            if 'url' not in item or 'iiif-url' not in item:
+                manifest = requests.get(item['manifest'], headers={'Content-type': 'application/json'}).json()
+                item['url'] = manifest['sequences'][0]['canvases'][0]['images'][0]['resource']['@id']
+                item['iiif-url'] = manifest['sequences'][0]['canvases'][0]['images'][0]['resource']['service']['@id']
+        else:
+            manifest = self._make_manifest(item)
+            if manifest and '@id' in manifest:
+                item['manifest'] = manifest['@id']
+                item['url'] = manifest['sequences'][0]['canvases'][0]['images'][0]['resource']['@id']
+                item['iiif-url'] = manifest['sequences'][0]['canvases'][0]['images'][0]['resource']['service']['@id']
+        logger.debug(json.dumps(item, indent=2))
+        return item
 
     _manifests_cache = {}
     def _get_manifests(self):
+        logger.debug('_get_manifests')
         with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
             futures = {}
             for item in self.markup.values():
                 if item['tag'] == 'image':
                     image_url = item.get('hires', item.get('url'))
+                    logger.debug(f'{item["id"]} {item["tag"]} {image_url} {image_url in self._manifests_cache}')
                     if image_url in self._manifests_cache:
                         item['manifest'] = self._manifests_cache[image_url]
                         continue
@@ -493,7 +658,7 @@ class Essay(object):
                 item = future.result()
                 if 'manifest' in item:
                     self._manifests_cache[image_url] = item['manifest']
-                logger.info(f'id={item["id"]} manifest={item.get("manifest")}')
+                logger.debug(f'id={item["id"]} manifest={item.get("manifest")}')
 
     @property
     def json(self):

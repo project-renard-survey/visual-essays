@@ -10,7 +10,7 @@ import sys
 import re
 SCRIPT_DIR = os.path.abspath(os.path.dirname(__file__))
 BASEDIR = os.path.dirname(SCRIPT_DIR)
-DOCS_ROOT = os.path.dirname(BASEDIR)
+DOCS_ROOT = f'{os.path.dirname(BASEDIR)}/docs'
 logger.warning(DOCS_ROOT)
 sys.path.append(SCRIPT_DIR)
 
@@ -28,7 +28,7 @@ from bs4.element import Tag
 import requests
 logging.getLogger('requests').setLevel(logging.INFO)
 
-from flask import Flask, request, send_from_directory, redirect
+from flask import Flask, request, send_from_directory, redirect, Response
 
 app = Flask(__name__)
 
@@ -44,7 +44,9 @@ VE_JS_LIB = 'https://jstor-labs.github.io/visual-essays/lib/visual-essays.min.js
 ENV = 'prod'
 DEFAULT_ACCT = None
 DEFAULT_REPO = None
-GH_CREDS = 'Token 47189dabf0b91a356d9f02155fc234f51f07905c'
+
+with open(f'{BASEDIR}/gh-token', 'r') as fp:
+    GH_CREDS = f'Token {fp.read()}'
 
 KNOWN_SITES = {
     # 'localhost': {'acct': 'jstor-labs', 'repo': 'visual-essays'},
@@ -60,35 +62,13 @@ cors_headers = {
 }
 
 def content_baseurl(acct, repo):
-    return f'https://{acct}.github.io/{repo}{"/content" if repo == "plant-humanities" else ""}'
+    return f'https://{acct}.github.io/{repo}'
 
 def get_markdown(url):
     resp = requests.get(url)
     logger.debug(f'{url} {resp.status_code}')
     if resp.status_code == 200:
         return {'source': 'url', 'fname': url.split('/')[-1].replace('.md', ''), 'text': resp.content.decode('utf-8')}
-
-'''
-def get_gh_markdown(acct, repo, path=None):
-    # baseurl = content_baseurl(acct, repo)
-    for baseurl in (f'https://raw.githubusercontent.com/{acct}/{repo}/master{"/docs/content" if repo == "plant-humanities" else ""}', f'https://{acct}.github.io/{repo}'):
-        logger.info(f'get_gh_markdown: acct={acct} repo={repo} path={path} baseurl={baseurl}')
-        path_root = f'/{path}' if path else ''
-        files = [f'/{path_root}' if path_root.endswith('.md') else f'{path_root}.md']
-        files += [f'{path_root}/{file}' for file in ('index.md', 'home.md', 'README.md')]
-        for file in files:
-            url = f'{baseurl}{file}'
-            resp = requests.get(url)
-            logger.info(f'{url} {resp.status_code}')
-            if resp.status_code == 200:
-                return {
-                    'baseurl': baseurl,
-                    'source': 'gh',
-                    'fname': file.replace('.md', ''),
-                    'match': file.split('/')[-1],
-                    'text': resp.content.decode('utf-8')
-            }
-'''
 
 def get_gh_baseurls(acct, repo):
     baseurl = f'https://raw.githubusercontent.com/{acct}/{repo}/master'
@@ -102,9 +82,6 @@ def get_gh_baseurls(acct, repo):
         if resp.json()['source']['path'] == '/docs':
             baseurl += '/docs'
             api_baseurl += '/docs'
-        if repo == 'plant-humanities':
-            baseurl += '/content'
-            api_baseurl += '/content'
 
     return baseurl, api_baseurl
 
@@ -123,7 +100,7 @@ def get_gh_markdown(acct, repo, path=None):
                 'Accept': 'application/vnd.github.v3+json',
                 'User-agent': 'JSTOR Labs visual essays client'
             })
-            logger.info(f'{url} {resp.status_code}')
+            logger.debug(f'{url} {resp.status_code}')
             if resp.status_code == 200:
                 resp = resp.json()
                 return {
@@ -136,7 +113,7 @@ def get_gh_markdown(acct, repo, path=None):
                     'sha': resp['sha']
                 }
             else:
-                logger.info(resp.json())
+                logger.debug(resp.json())
     for file in files:
         url = f'{api_baseurl}{file}'
         resp = requests.get(url, headers={
@@ -144,7 +121,7 @@ def get_gh_markdown(acct, repo, path=None):
             'Accept': 'application/vnd.github.v3+json',
             'User-agent': 'JSTOR Labs visual essays client'
         })
-        logger.info(f'{url} {resp.status_code}')
+        logger.debug(f'{url} {resp.status_code}')
         if resp.status_code == 200:
             resp = resp.json()
             return {
@@ -156,6 +133,19 @@ def get_gh_markdown(acct, repo, path=None):
                 'url': url,
                 'sha': resp['sha']
         }
+
+def get_gh_component(acct, repo, path):
+    _, api_baseurl = get_gh_baseurls(acct, repo)
+    url = f'{api_baseurl}/{path}'
+    logger.info(f'get_gh_component: acct={acct} repo={repo} path={path} api_baseurl={api_baseurl} url={url}')
+    resp = requests.get(url, headers={
+        'Authorization': GH_CREDS,
+        'Accept': 'application/vnd.github.v3+json',
+        'User-agent': 'JSTOR Labs visual essays client'
+    })
+    if resp.status_code == 200:
+        resp = resp.json()
+        return base64.b64decode(resp['content']).decode('utf-8')
 
 def get_gd_markdown(gdid):
     url = f'https://drive.google.com/uc?export=download&id={gdid}'
@@ -174,7 +164,7 @@ def get_local_markdown(path=None):
     files = ['index.md', 'home.md', 'README.md'] if is_dir else [fname if fname.endswith('.md') else f'{fname}.md']
     for file in files:
         fpath = f'{fdir}/{file}'
-        logger.info(f'fpath{fpath} exists={os.path.exists(fpath)}')
+        logger.debug(f'fpath{fpath} exists={os.path.exists(fpath)}')
         if os.path.exists(fpath):
             with open(fpath, 'r') as fp:
                 return {
@@ -207,7 +197,7 @@ def convert_relative_links(soup, site, acct, repo, path, markdown):
             for attr in ('href',):
                 if attr in elem.attrs:
                     if not elem.attrs[attr].startswith('http'):
-                        logger.info(elem.attrs[attr])
+                        logger.debug(elem.attrs[attr])
                         if elem.attrs[attr].startswith('#'):
                             elem.attrs[attr] = f'{markdown["fname"]}{elem.attrs[attr]}'
                         if elem.attrs[attr][0] == '/':
@@ -217,9 +207,9 @@ def convert_relative_links(soup, site, acct, repo, path, markdown):
                                 rel_path = f'/{"/".join(path_elems)}' if len(path_elems) > 0 else ''
                             else:
                                 rel_path = f'/{"/".join(path_elems[:-1])}' if len(path_elems) > 1 else ''
-                            logger.info(f'path={path_elems} match={markdown["match"]} rel_path={rel_path}')
+                            logger.debug(f'path={path_elems} match={markdown["match"]} rel_path={rel_path}')
                             elem.attrs[attr] = f'{baseurl}{rel_path}/{elem.attrs[attr]}'
-                    logger.info(elem.attrs[attr])
+                    logger.debug(elem.attrs[attr])
     
     if site == 'localhost' and ENV == 'dev':
         # baseurl = f'http://localhost:5000/assets'
@@ -241,9 +231,7 @@ def convert_relative_links(soup, site, acct, repo, path, markdown):
                         else:
                             rel_path = f'/{"/".join(path_elems[:-1])}' if len(path_elems) > 1 else ''
                         elem.attrs[attr] = f'{baseurl}{rel_path}/{elem.attrs[attr]}'
-                    if repo == 'plant-humanities':
-                        elem.attrs[attr] = elem.attrs[attr].replace('/content/geojson', '/geojson')
-                    logger.info(elem.attrs[attr])
+                    logger.debug(elem.attrs[attr])
 
 def _is_empty(elem):
     child_images = [c for c in elem.children if c.name == 'img']
@@ -259,7 +247,7 @@ def markdown_to_html5(markdown, site=None, acct=None, repo=None, path=None):
     html = markdown_parser.markdown(
         markdown['text'],
         output_format='html5', 
-        extensions=['footnotes', 'pymdownx.superfences', 'pymdownx.details', 'attr_list'],
+        extensions=['footnotes', 'pymdownx.superfences', 'pymdownx.details', 'markdown_captions', 'attr_list'],
         extension_configs = {
             'footnotes': {
                 'SEPARATOR': '-'
@@ -341,26 +329,8 @@ def add_vue_app(html, js_lib):
 
     for url in [
             'https://unpkg.com/mirador@beta/dist/mirador.min.js',
-            #'https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.15.1/cytoscape.min.js',
-            'https://unpkg.com/cytoscape/dist/cytoscape.min.js',
-            'https://unpkg.com/popper.js@1.14.7/dist/umd/popper.js',
-            'https://cdn.jsdelivr.net/npm/cytoscape-popper@1.0.4/cytoscape-popper.min.js',
-            #'https://unpkg.com/tippy.js@4.0.1/umd/index.all.min.js',
-            #'https://unpkg.com/tippy.js@4.0.1/index.css',
-
-            #'https://cdnjs.cloudflare.com/ajax/libs/popper.js/2.4.4/cjs/popper-lite.min.jss',
-            #'https://cdnjs.cloudflare.com/ajax/libs/cytoscape-popper/1.0.5/cytoscape-popper.js',
-            #'https://cdnjs.cloudflare.com/ajax/libs/tippy.js/6.2.5/tippy.min.js',
-            #'https://unpkg.com/@popperjs/core@2',
-            #'https://unpkg.com/tippy.js@6',
-
-            #'https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.js',
-            #'https://unpkg.com/alea@1.0.0/alea.js',
-            #'https://visjs.github.io/vis-network/examples/network/exampleUtil.js',
-            #'http://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css',
-            'https://unpkg.com/vis-data@latest/peer/umd/vis-data.min.js',
-            'https://unpkg.com/vis-network@latest/peer/umd/vis-network.min.js',
-
+            'https://cdnjs.cloudflare.com/ajax/libs/openseadragon/2.4.2/openseadragon.min.js',
+            'https://d3plus.org/js/d3plus-network.v0.6.full.min.js',
             js_lib
         ]:
         lib = soup.new_tag('script')
@@ -377,6 +347,17 @@ def _set_logging_level(args):
         elif level == 'info':
             logger.setLevel(logging.INFO)
 
+def _is_entity_id(s, ns_required=False):
+    if not s or not isinstance(s, str): return False
+    eid = s.split(':')
+    if len(eid) == 1 and ns_required:
+        return False
+    if len(eid) == 2 and eid[0] not in NAMESPACES:
+        return False
+    if len(eid) > 2:
+        return False
+    return len(eid[-1]) > 1 and eid[-1][0] in ('Q', 'P') and eid[-1][1:].isdecimal()
+
 @app.route('/entity/<path:eid>', methods=['GET'])  
 @app.route('/entity', methods=['GET'])  
 def entity(eid=None):
@@ -386,8 +367,10 @@ def entity(eid=None):
     logger.info(f'DEFAULT_ACCT={DEFAULT_ACCT} DEFAULT_REPO={DEFAULT_REPO}')
     kwargs['acct'] = DEFAULT_ACCT if DEFAULT_ACCT else KNOWN_SITES.get(site, {}).get('acct')
     kwargs['repo'] = DEFAULT_REPO if DEFAULT_REPO else KNOWN_SITES.get(site, {}).get('repo')
-    # kwargs['refresh'] = kwargs['refresh'] == 'true' if 'refresh' in kwargs else kwargs.pop('mode', ENV) == 'dev'
-    kwargs['refresh'] = True
+    if 'refresh' in kwargs:
+        kwargs['refresh'] in ('true', '')
+    else:
+        kwargs['refresh'] = 'article' in kwargs
     logger.info(f'entity: eid={eid} kwargs={kwargs}')
     if request.method == 'OPTIONS':
         return ('', 204, cors_headers)
@@ -397,24 +380,34 @@ def entity(eid=None):
         entity = KnowledgeGraph(cache=cache, **kwargs).entity(**kwargs)
         return (entity, 200, cors_headers)
 
-@app.route('/specimens/<taxon_name>', methods=['GET'])  
-def specimens(taxon_name):
+@app.route('/specimens/<path:path>', methods=['GET'])
+@app.route('/specimen/<path:path>', methods=['GET'])
+def specimens(path):
     kwargs = dict([(k, request.args.get(k)) for k in request.args])
     accept = request.headers.get('Accept', 'application/json').split(',')
     content_type = ([ct for ct in accept if ct in ('text/html', 'application/json', 'text/csv', 'text/tsv')] + ['application/json'])[0]
     _set_logging_level(kwargs)
-    logger.info(f'specimens: taxon_name={taxon_name} kwargs={kwargs}')
+    logger.info(f'specimens: path={path} kwargs={kwargs}')
     if request.method == 'OPTIONS':
         return ('', 204, cors_headers)
     else:
-        taxon_name = taxon_name.replace('_', ' ')
+        taxon_name = gpid = wdid = None
+        path_elems = path.split('/')
+        if len(path_elems) == 1:
+            if _is_entity_id(path_elems[0]):
+                wdid = path_elems[0] if path_elems[0].startswith('wd:') else f'wd:{path_elems[0]}'
+            else:
+                taxon_name = path_elems[0].replace('_', ' ')
+        else:
+            gpid = '/'.join(path_elems)
+        kwargs['preload'] = kwargs.pop('preload', 'false').lower() in ('true', '')
         # refresh = kwargs.pop('refresh', 'false').lower() in ('true', '')
         refresh = True
-        specimens = cache.get(taxon_name) if not refresh else None
+        specimens = cache.get(path) if not refresh else None
         if specimens is None:
-            specimens = get_specimens(taxon_name, **kwargs)
+            specimens = get_specimens(taxon_name=taxon_name, gpid=gpid, wdid=wdid, **kwargs)
             if specimens['specimens']:
-                cache[taxon_name] = specimens
+                cache[path] = specimens
         else:
             specimens['from_cache'] = True
         if content_type == 'text/html':
@@ -458,7 +451,7 @@ def essay_local(file=None):
 @app.route('/essay/<path:path>', methods=['GET'])
 @app.route('/essay/', methods=['GET'])
 def essay(path=None):
-    logger.info(path)
+    logger.info(f'essay: {path}')
     kwargs = dict([(k, request.args.get(k)) for k in request.args])
     _set_logging_level(kwargs)
     if request.method == 'OPTIONS':
@@ -486,44 +479,44 @@ def essay(path=None):
         elif gdid:
             markdown = get_gd_markdown(gdid)
         else:
-            acct = DEFAULT_ACCT if DEFAULT_ACCT else KNOWN_SITES.get(site, {}).get('acct')
-            repo = DEFAULT_REPO if DEFAULT_REPO else KNOWN_SITES.get(site, {}).get('repo')
             path_elems = path.split('/') if path else []
-            logger.info(f'essay: site={site} path={path} raw={raw} kwargs={kwargs}')
-            if site == 'localhost' and ENV == 'dev':
-                abs_path = f'{DOCS_ROOT}/docs{"/content/" if repo == "plant-humanities" else "/"}{"/".join(path_elems)}'
-                is_dir = os.path.isdir(abs_path)
-                logger.info(f'path={path} abs_path={abs_path} is_dir={is_dir}')
-                markdown = get_local_markdown(abs_path)
-                baseurl = 'http://localhost:5000'
+            logger.info(path_elems)
+            if site in ('localhost', 'visual-essays.app'):
+                if ENV == 'dev':
+                    acct = path_elems[0] if len(path_elems) > 1 else DEFAULT_ACCT if DEFAULT_ACCT else 'jstor-labs'
+                    repo = path_elems[1] if len(path_elems) > 1 else DEFAULT_REPO if DEFAULT_REPO else 'visual-essays'
+                    path = '/'.join(path_elems[2:]) if (DEFAULT_ACCT or acct == 'jstor-labs') and len(path_elems) > 1 else '/'.join(path_elems)
+                    baseurl = 'http://localhost:5000'
+                    abs_path = f'{DOCS_ROOT}/{path}'
+                    logger.info(f'acct={acct} repo={repo} path={path} abs_path={abs_path} is_dir={os.path.isdir(abs_path)}')
+                    markdown = get_local_markdown(abs_path)
+                else:
+                    acct = path_elems[0] if len(path_elems) > 1 else DEFAULT_ACCT if DEFAULT_ACCT else 'jstor-labs'
+                    repo = path_elems[1] if len(path_elems) > 1 else DEFAULT_REPO if DEFAULT_REPO else 'visual-essays'
+                    path = '/'.join(path_elems) if len(path_elems) == 1 or (DEFAULT_ACCT and acct != DEFAULT_ACCT) else '/'.join(path_elems[2:])
+                    baseurl = content_baseurl(acct, repo)
+                    markdown = get_gh_markdown(acct, repo, path)
             else:
-                if site in ('localhost', 'visual-essays.app'):
-                    if len(path_elems) > 2:
-                        acct = path_elems[0]
-                        repo = path_elems[1]
-                        path = '/'.join(path_elems[2:])
-                    elif len(path_elems) == 2:
-                        acct = path_elems[0]
-                        repo = path_elems[1]
-                        path = None
-                    elif len(path_elems) == 1:
-                        path = path_elems[0]
-                markdown = get_gh_markdown(acct, repo, path)
+                acct = KNOWN_SITES.get(site, {}).get('acct', )
+                repo = KNOWN_SITES.get(site, {}).get('repo')
                 baseurl = content_baseurl(acct, repo)
-        logger.info(f'essay: site={site} acct={acct} repo={repo} path={path} raw={raw} kwargs={kwargs}')
+                markdown = get_gh_markdown(acct, repo, path)
+
+            logger.info(f'essay: site={site} acct={acct} repo={repo} path={path} raw={raw} kwargs={kwargs} markdown={markdown is not None}')
+        
         if markdown:
             if raw:
                 return (markdown['text'], 200, cors_headers)
             else:
                 cache_key = f'{site}|{acct}|{repo}|{path}'
-                cached = cache.get(cache_key) if not refresh else False
-                logger.info(f'essay: site={site} acct={acct} repo={repo} path={path} cached={cached and cached["sha"] == markdown["sha"]}')
-                if cached and cached['sha'] == markdown['sha']:
+                cached = cache.get(cache_key) if not refresh and not site == 'localhost' else None
+                logger.info(f'essay: site={site} acct={acct} repo={repo} path={path} cached={cached and cached["sha"] == markdown.get("sha")}')
+                if cached and cached['sha'] == markdown.get('sha'):
                     html = cached['html']
                 else:
                     essay = Essay(html=markdown_to_html5(markdown, site, acct, repo, path or '/'), cache=cache, baseurl=baseurl, **kwargs)
-                    html = add_vue_app(essay.soup, VE_JS_LIB)
-                    if 'url' in markdown and 'sha' in markdown:
+                    html = add_vue_app(essay.soup, 'http://localhost:8080/lib/visual-essays.js' if site == 'localhost' else VE_JS_LIB)
+                    if not site == 'localhost' and 'url' in markdown and 'sha' in markdown:
                         cache[cache_key] = {'html': html, 'sha': markdown['sha']}
                 return (html, 200, cors_headers)
         else:
@@ -546,42 +539,70 @@ def config(path=None):
     else:
         path_elems = path.split('/') if path else []
         site = urlparse(request.base_url).hostname
-        acct = path_elems[0] if len(path_elems) == 2 else DEFAULT_ACCT if DEFAULT_ACCT else KNOWN_SITES.get(site, {}).get('acct', )
-        repo = path_elems[1] if len(path_elems) == 2 else DEFAULT_REPO if DEFAULT_REPO else KNOWN_SITES.get(site, {}).get('repo')
-        logger.info(f'config: site={site} acct={acct} repo={repo}')
-        _config = None
-        if site == 'localhost' and ENV == 'dev':
-            baseurl = 'http://localhost:5000'     
-            config_path = f'{DOCS_ROOT}/docs/config.json'
-            logger.info(f'config_path={config_path} exists={os.path.exists(config_path)}')
-            if os.path.exists(config_path):
-                _config = json.load(open(config_path, 'r'))
+        # acct = path_elems[0] if len(path_elems) >= 2 else DEFAULT_ACCT if DEFAULT_ACCT else KNOWN_SITES.get(site, {}).get('acct', )
+        # repo = path_elems[1] if len(path_elems) >= 2 else DEFAULT_REPO if DEFAULT_REPO else KNOWN_SITES.get(site, {}).get('repo')
+        logger.info(f'config: site={site} path={path_elems} ENV={ENV}')
+        _config = {}
+        if site in ('localhost', 'visual-essays.app'):
+            if DEFAULT_ACCT:
+                acct = DEFAULT_ACCT
+                repo = DEFAULT_REPO
+                path = '/'.join(path_elems)
+            else:
+                acct = path_elems[0] if len(path_elems) > 1 else 'jstor-labs'
+                repo = path_elems[1] if len(path_elems) > 1 else 'visual-essays'
+                path = '/'.join(path_elems[2:]) if len(path_elems) > 1 else '/'.join(path_elems)
+            if ENV == 'dev':
+                path = '/'.join(path_elems)
+                browser_root = '' if acct == DEFAULT_ACCT or len(path_elems) < 2 else f'/{acct}/{repo}'
+                baseurl = 'http://localhost:5000'
+                assets_baseurl = 'http://localhost:5000/assets'
+                config_path = f'{DOCS_ROOT}/config.json'
+                logger.info(f'local_config_path={config_path} exists={os.path.exists(config_path)}')
+                if os.path.exists(config_path):
+                    _config = json.load(open(config_path, 'r'))
+            else:
+                # path = '/'.join(path_elems) if DEFAULT_ACCT and acct != DEFAULT_ACCT else '/'.join(path_elems[2:])
+                browser_root = '' if acct in (DEFAULT_ACCT, 'jstor-labs') and repo in (DEFAULT_REPO, 'visual-essays') else f'/{acct}/{repo}'
+                baseurl, _ = get_gh_baseurls(acct, repo)
+                assets_baseurl = baseurl
+                config_path = f'{baseurl}/config.json'
+                resp = requests.get(config_path)
+                logger.info(f'gh_config_path={config_path} baseurl={baseurl} exists={resp.status_code == 200}')
+                _config = resp.json() if resp.status_code == 200 else {}
         else:
-            baseurl = f'https://{acct}.github.io/{repo}'
-            logger.info(f'{baseurl}/config.json')
-            resp = requests.get(f'{baseurl}/config.json')
-            _config = resp.json() if resp.status_code == 200 else None
-        if _config:
-            baseurl = f'http://localhost:5000/assets' if site == 'localhost' and ENV == 'dev' else f'https://{acct}.github.io/{repo}'
-            for attr in ('banner', 'logo'):
-                if attr in _config and not _config[attr].startswith('http'):
-                    logger.info(_config[attr])
-                    if _config[attr][0] == '/':
-                        _config[attr] = f'{baseurl}{_config[attr]}'
-                    else:
-                        _config[attr] = f'{baseurl}/{_config[attr]}'
-                    logger.info(_config[attr])
-            baseurl = f'http://localhost:5000' if site == 'localhost' and ENV == 'dev'  else f'https://{acct}.github.io/{repo}'
-            for comp in _config.get('components', []):
-                if not comp['src'].startswith('http'):
-                    if comp['src'][0] == '/':
-                        comp['src'] = f'{baseurl}{comp["src"]}'
-                    else:
-                        comp['src'] = f'{baseurl}/{comp["src"]}'
-                    logger.info(f'component={comp["src"]}')
-            return (_config, 200, cors_headers)
-        else:
-            return 'Not found', 404
+            acct = KNOWN_SITES.get(site, {}).get('acct', )
+            repo = KNOWN_SITES.get(site, {}).get('repo')
+            path = '/'.join(path_elems)
+            browser_root = ''
+            baseurl, _ = get_gh_baseurls(acct, repo)
+            assets_baseurl = baseurl
+            config_path = f'{baseurl}/config.json'
+            resp = requests.get(config_path)
+            logger.info(f'gh_config_path={config_path} exists={resp.status_code == 200}')
+            _config = resp.json() if resp.status_code == 200 else {}
+        logger.info(f'config: site={site} acct={acct} repo={repo} path={path}')
+        for attr in ('banner', 'logo'):
+            if attr in _config and not _config[attr].startswith('http'):
+                logger.info(_config[attr])
+                if _config[attr][0] == '/':
+                    _config[attr] = f'{assets_baseurl}{_config[attr]}'
+                else:
+                    _config[attr] = f'{assets_baseurl}/{_config[attr]}'
+                logger.info(_config[attr])
+        for comp in _config.get('components', []):
+            if not comp['src'].startswith('http'):
+                if comp['src'][0] == '/':
+                    comp['src'] = f'{baseurl}{comp["src"]}'
+                else:
+                    comp['src'] = f'{baseurl}/{comp["src"]}'
+                logger.info(f'component={comp["src"]}')
+        _config['path'] = path
+        _config['acct'] = acct
+        _config['repo'] = repo
+        _config['browserRoot'] = browser_root
+        _config['gh_root'] = f'/{acct}/{repo}{"/docs" if baseurl.endswith("/docs") or ENV == "dev" else ""}' if acct else None
+        return (_config, 200, cors_headers)
 
 @app.route('/<path:path>', methods=['GET'])
 @app.route('/', methods=['GET'])
@@ -602,38 +623,13 @@ def site(path=None):
             if site == 'localhost':
                 html = re.sub(r'"https://jstor-labs.github.io/visual-essays.+"', '"http://localhost:8080/lib/visual-essays.js"', html)
             return html, 200
-'''
-@app.route('/<acct>/<repo>/<file>', methods=['GET'])  
-@app.route('/<acct>/<repo>', methods=['GET'])  
-@app.route('/<file>', methods=['GET'])  
-@app.route('/', methods=['GET'])  
-def site(acct=None, repo=None, file=None):    
-    kwargs = dict([(k, request.args.get(k)) for k in request.args])
-    _set_logging_level(kwargs)
-    site = urlparse(request.base_url).hostname
-    if site == 'kent-maps.online':
-        return redirect(f'https://dickens.kent-maps.online{request.path}', code=302)
-
-    acct = acct if acct else KNOWN_SITES.get(site, {}).get('acct')
-    repo = repo if repo else KNOWN_SITES.get(site, {}).get('repo')
-    logger.info(f'site: site={site} acct={acct} repo={repo} kwargs={kwargs}')
-
-    if request.method == 'OPTIONS':
-        return ('', 204, cors_headers)
-    else:
-        with open(os.path.join(BASEDIR, 'index.html'), 'r') as fp:
-            html = fp.read()
-            if site == 'localhost':
-                html = re.sub(r'"https://jstor-labs.github.io/visual-essays.+"', '"http://localhost:8080/lib/visual-essays.js"', html)
-            return html, 200
-'''
 
 @app.route('/assets/<path:path>', methods=['GET'])
 def assets(path):
     logger.info(f'assets: {path}')
     path_elems = path.split('/')
     logger.info(path_elems)
-    idir = f'{DOCS_ROOT}/docs/{"/".join(path_elems[:-1])}' if len(path_elems) > 1 else f'{DOCS_ROOT}/docs'
+    idir = f'{DOCS_ROOT}/{"/".join(path_elems[:-1])}' if len(path_elems) > 1 else f'{DOCS_ROOT}'
     fname = path_elems[-1]
     logger.info(f'assets: dir={idir} fname={fname}')
     return send_from_directory(idir, fname, as_attachment=False)
@@ -643,20 +639,30 @@ def geojson(fname):
     return send_from_directory(os.path.join(DOCS_ROOT, 'geojson'), fname, as_attachment=False)
 
 @app.route('/components/<path:path>', methods=['GET'])
+@app.route('/component/<path:path>', methods=['GET'])
 def components(path):
     if request.method == 'OPTIONS':
         return ('', 204, cors_headers)
     else:
-        logger.info(path)
+        site = urlparse(request.base_url).hostname
+        logger.info(f'component path={path} site={site}')
         path_elems = path.split('/')
-        fname = path_elems[-1]
-        for root in [DOCS_ROOT, os.path.dirname(BASEDIR)]:
-            logger.info(root)
-            _dir = f'{root}/docs/components/{"/".join(path_elems[:-1])}'
-            exists = os.path.exists(f'{_dir}/{fname}')
-            logger.info(f'components: dir={_dir} fname={fname} exists={exists}')
-            if exists:
-                return (send_from_directory(_dir, fname, as_attachment=False), 200, cors_headers)
+        if site == 'localhost':
+            fname = path_elems[-1]
+            for root in [DOCS_ROOT, f'{os.path.dirname(BASEDIR)}/docs']:
+                logger.info(root)
+                _dir = f'{root}/components/{"/".join(path_elems[:-1])}'
+                exists = os.path.exists(f'{_dir}/{fname}')
+                logger.info(f'components: dir={_dir} fname={fname} exists={exists}')
+                if exists:
+                    return (send_from_directory(_dir, fname, as_attachment=False), 200, cors_headers)
+        elif site == 'visual-essays.app':
+            acct = path_elems[0] if len(path_elems) > 2 else DEFAULT_ACCT if DEFAULT_ACCT else 'jstor-labs'
+            repo = path_elems[1] if len(path_elems) > 2 else DEFAULT_REPO if DEFAULT_REPO else 'visual-essays'
+            path = '/'.join(path_elems) if len(path_elems) <= 2 or (DEFAULT_ACCT and acct != DEFAULT_ACCT) else '/'.join(path_elems[2:])
+            baseurl = content_baseurl(acct, repo)
+            component_source = get_gh_component(acct, repo, path)
+            return Response(response=component_source, status=200, mimetype='text/plain', headers=cors_headers)
 
 def usage():
     print('%s [hl:dr:a:p:]' % sys.argv[0])
@@ -686,7 +692,7 @@ if __name__ == '__main__':
             elif loglevel in ('info',): logger.setLevel(logging.INFO)
             elif loglevel in ('debug',): logger.setLevel(logging.DEBUG)
         elif o in ('-d', '--dev'):
-            VE_JS_LIB = 'http://localhost:8080/lib/visual-essays.js'
+            # VE_JS_LIB = 'http://localhost:8080/lib/visual-essays.js'
             ENV = 'dev'
         elif o in ('-r', '--docs-root'):
             DOCS_ROOT = a
