@@ -533,7 +533,7 @@ class Essay(object):
             manifest['sequences'][0]['canvases'][0]['label'] = label
         metadata = dict([(k,v) for k,v in item.items() if v and k in ('attribution', 'date', 'description', 'license', 'logo', 'rights')])
         metadata['source'] = item['url']
-        metadata['version'] = '1'
+        metadata['version'] = '2'
 
         for fld in ('attribution', 'description', 'license', 'logo'):
             if fld in metadata:

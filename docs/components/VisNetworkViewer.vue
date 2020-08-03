@@ -185,9 +185,14 @@ module.exports = {
     //get entity (image) for a single node
     getImage(node) {
       return this.getEntity(node.qid).then((result) => {
-        if (result["summary info"] && result["summary info"].originalimage) {
-          var imageobj = result["summary info"].originalimage;
-          node.image = imageobj.source;
+        node.label = result.labels.en ? result.labels.en.value : ''
+        const imgSrc = result['summary info'] && result['summary info'].originalimage
+          ? result['summary info'].originalimage.source
+          : result.claims.image && result.claims.image.length > 0
+            ? `https://commons.wikimedia.org/w/thumb.php?f=${result.claims.image[0].value}&w=140`
+            : undefined
+        if (imgSrc) {
+          node.image = imgSrc;
           node.shape = "circularImage";
         }
         return node;
@@ -207,7 +212,7 @@ module.exports = {
       return parts.join("&");
     },
     getEntity(eid) {
-      let url = `https://visual-essays.app/entity/${encodeURIComponent(eid)}`;
+      let url = `https://visual-essays.app/entity/${encodeURIComponent(eid)}?refresh=false`;
       const args = {};
       if (this.context) args.context = this.context;
       //if (this.entity.article) args.article = this.entity.article

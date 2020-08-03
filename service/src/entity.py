@@ -356,15 +356,16 @@ class KnowledgeGraph(object):
                     }
             else:
                 try:
-                    logger.info(summary_url)
+                    logger.info(f'summary_url={summary_url}')
                     md = requests.get(summary_url).content.decode('utf-8')
                     html = markdown_parser.markdown(md, output_format='html5')
                     soup = BeautifulSoup(html, 'html5lib')
-                    paragraphs = ['\n'.join(p.contents) for p in soup.find_all('p')]
+                    paragraphs = []
+                    paragraphs = [p.text for p in soup.find_all('p')]
                     logger.info('\f'.join(paragraphs))
                     entity['summary info'] = {'extract_html': '<br><br>'.join(paragraphs)}
                 except:
-                    pass
+                    logger.warning(traceback.format_exc())
 
     def _find_ids(self, entity):
         ids = set()

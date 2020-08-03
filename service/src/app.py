@@ -346,6 +346,17 @@ def _set_logging_level(args):
         elif level == 'info':
             logger.setLevel(logging.INFO)
 
+def _is_entity_id(s, ns_required=False):
+    if not s or not isinstance(s, str): return False
+    eid = s.split(':')
+    if len(eid) == 1 and ns_required:
+        return False
+    if len(eid) == 2 and eid[0] not in NAMESPACES:
+        return False
+    if len(eid) > 2:
+        return False
+    return len(eid[-1]) > 1 and eid[-1][0] in ('Q', 'P') and eid[-1][1:].isdecimal()
+
 @app.route('/entity/<path:eid>', methods=['GET'])  
 @app.route('/entity', methods=['GET'])  
 def entity(eid=None):
@@ -355,7 +366,10 @@ def entity(eid=None):
     logger.info(f'DEFAULT_ACCT={DEFAULT_ACCT} DEFAULT_REPO={DEFAULT_REPO}')
     kwargs['acct'] = DEFAULT_ACCT if DEFAULT_ACCT else KNOWN_SITES.get(site, {}).get('acct')
     kwargs['repo'] = DEFAULT_REPO if DEFAULT_REPO else KNOWN_SITES.get(site, {}).get('repo')
-    kwargs['refresh'] = kwargs['refresh'] in ('true', '') if 'refresh' in kwargs else False
+    if 'refresh' in kwargs:
+        kwargs['refresh'] in ('true', '')
+    else:
+        kwargs['refresh'] = 'article' in kwargs
     logger.info(f'entity: eid={eid} kwargs={kwargs}')
     if request.method == 'OPTIONS':
         return ('', 204, cors_headers)
@@ -379,8 +393,8 @@ def specimens(path):
         taxon_name = gpid = wdid = None
         path_elems = path.split('/')
         if len(path_elems) == 1:
-            if path_elems[0].startswith('wd:'):
-                wdid = path_elems[0]
+            if _is_entity_id(path_elems[0]):
+                wdid = path_elems[0] if path_elems[0].startswith('wd:') else f'wd:{path_elems[0]}'
             else:
                 taxon_name = path_elems[0].replace('_', ' ')
         else:
