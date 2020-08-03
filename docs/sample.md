@@ -62,7 +62,7 @@
        dependencies="https://cdnjs.cloudflare.com/ajax/libs/openseadragon/2.4.2/openseadragon.min.js|https://storiiies.cogapp.com/assets/demos/viewer/js/shortcode.js">
 
 <param ve-entity title="Ginevra de' Benci" eid="Q1267893">
-<param ve-entity title="Milan, Italy" eid="Q490">
+<param ve-entity title="Milan, Italy" eid="Q490" article="milan">
 <param ve-entity title="Bologna, Italy" eid="Q1891">
 <param ve-entity title="Rome, Italy" eid="Q220">
 <param ve-entity title="Venice, Italy" eid="Venice">
@@ -71,7 +71,11 @@
 
 ## OpenSeadragon Image Viewer
 
-Ginevra de' Benci is a portrait painting by Leonardo da Vinci of the 15th-century Florentine aristocrat Ginevra de' Benci (born c.  1458). The oil-on-wood portrait was acquired by the National Gallery of Art in Washington, D.C. in 1967. The sum of US$5 million—an absolute record price at the time—came from the Ailsa Mellon Bruce Fund and was paid to the Princely Family of Liechtenstein. It is the only painting by Leonardo on public view in the Americas.
+Ginevra de' Benci is a portrait painting by Leonardo da Vinci of the 15th-century Florentine aristocrat Ginevra de' Benci (born c.  1458). The oil-on-wood portrait was acquired by the National Gallery of Art in Washington, D.C. in 1967. The sum of US$5 million—an absolute record price at the time—came from the Ailsa Mellon Bruce Fund and was paid to the Princely Family of Liechtenstein.
+
+>Ginevra de' Benci is a portrait painting by Leonardo da Vinci of the 15th-century Florentine aristocrat Ginevra de' Benci (born c.  1458). The oil-on-wood portrait was acquired by the National Gallery of Art in Washington, D.C. in 1967. The sum of US$5 million—an absolute record price at the time—came from the Ailsa Mellon Bruce Fund and was paid to the Princely Family of Liechtenstein.
+
+It is the only painting by Leonardo on public view in the Americas.
 <param ve-image
        primary
        fit="cover"
