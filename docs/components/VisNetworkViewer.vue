@@ -177,7 +177,7 @@ module.exports = {
         transformed.edges.push({
           from: nodes[obj.source.id || obj.source.label],
           to: nodes[obj.target.id || obj.target.label],
-          title: obj.edge.label || obj.edge.id,
+          title: obj.edge ? (obj.edge.label || obj.edge.id) : ''
         });
       });
       return transformed;
