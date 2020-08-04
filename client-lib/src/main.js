@@ -37,7 +37,7 @@ import _ from 'lodash'
 
 import MobileDetect from 'mobile-detect'
 
-const VERSION = '0.7.26'
+const VERSION = '0.7.27'
 
 console.log(window.location.hostname)
 const componentsBaseURL = window.location.hostname === 'localhost' ? '' : 'https://jstor-labs.github.io/visual-essays'

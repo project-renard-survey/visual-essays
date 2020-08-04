@@ -25,12 +25,15 @@
           <component
             v-bind:is="groups[tab].component"
             :items="groups[tab].items"
+            :itemsInActiveElements="itemsInActiveElements"
+            :activeElements="activeElements"
             :selected="activeTab"
             :width="viewerWidth"
             :height="viewerHeight"
             :initial-mode="mode"
             :hoverItemID="hoverItemID"
             :selectedItemID="selectedItemID"
+            :layout="layout"
             @hover-id="setHoverItemID"
             @selected-id="setSelectedItemID"
           />
@@ -258,6 +261,7 @@
   #essay.vertical {
     background-color: #eaeaea;
     padding: 12px 0;
+    max-width: calc(50vw + 20px);
   }
 
   #essay.vertical .v-tabs-bar {
@@ -289,6 +293,7 @@
     border-radius: 0;
     position: relative;
     top: 0px;
+    min-width: calc(50vw - 20px);
   }
 
   .v-tab {
