@@ -21,8 +21,8 @@
 
     <v-container v-else :style="`margin-top:${essayTopMargin}px; height:${height}px`">
       <v-row v-if="layout === 'vtl'" no-gutters>
-        <v-col class="essay-pane vtl"><essay/></v-col>
-        <v-col class="viewer-pane vtl"><viewer/></v-col>
+        <v-col cols="12" md="6" class="essay-pane vtl"><essay/></v-col>
+        <v-col cols="12" md="6" class="viewer-pane vtl"><viewer/></v-col>
       </v-row>
       <v-row v-else no-gutters>
         <v-col>
