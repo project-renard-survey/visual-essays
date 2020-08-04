@@ -322,7 +322,8 @@ export default {
 
   .vtl #essay p.active-elem {
     border-left: none;
-    width: calc(50vw + 40px);
+    width: calc(100% + 20px);
+    /* width: calc(50vw + 40px); */
     padding-right: 52px
   }
   

@@ -261,7 +261,7 @@
   #essay.vertical {
     background-color: #eaeaea;
     padding: 12px 0;
-    max-width: calc(50vw + 20px);
+    /* max-width: calc(50vw + 20px); */
   }
 
   #essay.vertical .v-tabs-bar {
@@ -293,7 +293,7 @@
     border-radius: 0;
     position: relative;
     top: 0px;
-    min-width: calc(50vw - 20px);
+    /* min-width: calc(50vw - 20px); */
   }
 
   .v-tab {
