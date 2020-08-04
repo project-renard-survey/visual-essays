@@ -42,6 +42,7 @@ module.exports = {
     selectedItemID: String
   },
   data: () => ({
+    timeSelector: false,
     map: null,
     // geojson: {},
     baseLayer: undefined,
@@ -64,7 +65,6 @@ module.exports = {
   }),
   computed: {
     mapDef() { return this.items[0] },
-    timeSelector() { return this.mapDef['time-selector'] },
     activeElements() { return this.$store.getters.activeElements },
     itemsInActiveElements() { return this.$store.getters.itemsInActiveElements },
     entities() { return this.itemsInActiveElements.filter(item => item.tag === 'entity') },
@@ -76,7 +76,7 @@ module.exports = {
   },
   mounted() {
     console.log(`MapViewer.mounted: height=${this.height} width=${this.width}`)
-    this.mapHeight = this.height
+    // this.mapHeight = this.height
     this.$nextTick(() => this.createBaseMap())
   },
   methods: {
@@ -91,9 +91,8 @@ module.exports = {
       this.syncLayers()
     },
     timeRangeFilter(feature) {
-      console.log(this.timeRange)
       if (feature.properties[this.dateField]) {
-        const dateStrs = feature.properties[this.dateField].split(':')
+        const dateStrs = `${feature.properties[this.dateField]}`.split(':')
         feature.properties.startDate = this.parseDate(dateStrs[0]).getUTCFullYear()
         feature.properties.endDate = dateStrs.length === 1 ? feature.properties.startDate : this.parseDate(dateStrs[1]).getUTCFullYear()
         feature.properties.value = feature.properties.startDate
@@ -487,15 +486,15 @@ module.exports = {
       handler: function () {
         const timeSelectorHeight = this.$refs.timeSelector ? this.$refs.timeSelector.clientHeight : 0
         this.mapHeight = this.height - timeSelectorHeight
-        // console.log(`height=${this.height} timeSelectorHeight=${timeSelectorHeight} mapHeight=${this.mapHeight}`)
         const lmap = document.getElementById('lmap')
         if (lmap) {
           lmap.style.height = `${this.mapHeight}px`
           // console.log(`lmap.style.height=${lmap.style.height}`)
           this.map.invalidateSize()
         }
+        console.log(`${this.$options.name}.watch.height: height=${this.height} width=${this.width} timeSelectorHeight=${timeSelectorHeight} mapHeight=${this.mapHeight} lmap=${lmap ? lmap.style.height : 0}`)
       },
-      immediate: false
+      immediate: true
     },
     activeElements: {
       handler: function () {
@@ -503,9 +502,19 @@ module.exports = {
       },
       immediate: false
     },
+    timeSelector: {
+      handler: function () {
+        const timeSelectorHeight = this.$refs.timeSelector ? this.$refs.timeSelector.clientHeight : 0
+        this.mapHeight = this.height - timeSelectorHeight
+        console.log(`timeSelector: timeSelector=${this.timeSelector !== undefined} timeSelectorHeight=${timeSelectorHeight} mapHeight=${this.mapHeight}`)
+      },
+      immediate: true
+    },
     mapDef: {
       handler: function (mapDef, prior) {
         const lmap = document.getElementById('lmap')
+        console.log('mapDef', lmap)
+        this.timeSelector = mapDef['time-selector']
         if (lmap) {
           if (mapDef) {
             if (this.timeSelector && this.timeSelector !== 'true') {
