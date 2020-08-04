@@ -24,8 +24,6 @@ import { parseQueryString, prepItems, elemIdPath, itemsInElements, groupItems, p
 import '../assets/js/leaflet-fa-markers.js'
 import '../assets/js/fontawesome-pro.min.js'
 
-import 'leaflet.control.opacity'
-
 import VueAnalytics from 'vue-analytics'
 
 // Default viewer components
@@ -39,14 +37,19 @@ import _ from 'lodash'
 
 import MobileDetect from 'mobile-detect'
 
-const VERSION = '0.7.23'
+const VERSION = '0.7.24'
 
 console.log(window.location.hostname)
 const componentsBaseURL = window.location.hostname === 'localhost' ? '' : 'https://jstor-labs.github.io/visual-essays'
 
 const customScripts = [
   'https://cdnjs.cloudflare.com/ajax/libs/openseadragon/2.4.2/openseadragon.min.js',
-  'https://storiiies.cogapp.com/assets/demos/viewer/js/shortcode.js'  // for Storiiies
+  'https://storiiies.cogapp.com/assets/demos/viewer/js/shortcode.js',  // for Storiiies
+  'https://unpkg.com/leaflet@1.3.1/dist/leaflet.css',
+  'https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js',
+  'https://cdn.rawgit.com/mejackreed/Leaflet-IIIF/v2.0.1/leaflet-iiif.js',
+  'https://cdn.rawgit.com/digidem/leaflet-side-by-side/6ea4567fe8d1b3e6ea3b0e9ca05d311f5be125a3/leaflet-side-by-side.js'
+
 ]
 const customStyles = []
 
@@ -71,7 +74,8 @@ const defaultComponents = [
   { name: 'horizontalViewer', component: HorizontalViewer },
   { name: 'verticalViewer', component: VerticalViewer },
   { name: 'entityInfoboxDialog', component: EntityInfoboxDialog },
-  { name: 'entityInfobox', src: `${componentsBaseURL}/components/EntityInfobox.vue` }
+  { name: 'entityInfobox', src: `${componentsBaseURL}/components/EntityInfobox.vue` },
+  { name: 'iiifSideBySide', src: `${componentsBaseURL}/components/IIIFSideBySide.vue`, selectors: ['tag:iiif-compare'], icon: 'fa-file-image', label: 'Image compare' }
 ]
 
 const components = {}

@@ -299,7 +299,7 @@ class KnowledgeGraph(object):
         logger.info(f'_add_summary_text: id={entity.get("id")} project={project} article={article}')
         summary_url = None
         if article:
-            summary_url = f'https://{self.acct}.github.io/{self.repo}/articles/{article}.md'
+            summary_url = f'https://raw.githubusercontent.com/{self.acct}/{self.repo}/master/articles/{article}.md'
         elif entity.get('id'):
             if 'described at URL' in entity['claims']:
                 for stmt in entity['claims']['described at URL']:
