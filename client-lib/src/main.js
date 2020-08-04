@@ -37,18 +37,14 @@ import _ from 'lodash'
 
 import MobileDetect from 'mobile-detect'
 
-const VERSION = '0.7.25'
+const VERSION = '0.7.26'
 
 console.log(window.location.hostname)
 const componentsBaseURL = window.location.hostname === 'localhost' ? '' : 'https://jstor-labs.github.io/visual-essays'
 
 const customScripts = [
   'https://cdnjs.cloudflare.com/ajax/libs/openseadragon/2.4.2/openseadragon.min.js',
-  'https://storiiies.cogapp.com/assets/demos/viewer/js/shortcode.js',  // for Storiiies
-  'https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js',
-  'https://cdn.rawgit.com/mejackreed/Leaflet-IIIF/v2.0.1/leaflet-iiif.js',
-  'https://cdn.rawgit.com/digidem/leaflet-side-by-side/6ea4567fe8d1b3e6ea3b0e9ca05d311f5be125a3/leaflet-side-by-side.js'
-
+  'https://storiiies.cogapp.com/assets/demos/viewer/js/shortcode.js'  // for Storiiies
 ]
 const customStyles = []
 

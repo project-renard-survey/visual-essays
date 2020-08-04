@@ -22,7 +22,7 @@ module.exports = {
     },
     mounted() {
         console.log(this.$options.name, this.items)
-        // this.loadDependencies(dependencies, 0, this.init)
+        this.loadDependencies(dependencies, 0, this.init)
     },
     methods: {
         init() {
