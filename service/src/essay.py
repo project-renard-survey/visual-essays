@@ -230,7 +230,6 @@ class Essay(object):
                 if attrs[attr] == '':
                     attrs[attr] = 'true'
 
-
             if 'id' not in attrs:
                 attrs['id'] = f'{tag}-{sum([1 for item in ve_markup.values() if item["tag"] == tag])+1}'
 
@@ -248,7 +247,7 @@ class Essay(object):
                 #if 'scope' not in attrs:
                 #    attrs['scope'] = 'global'
 
-            elif  tag == 'map':
+            elif tag == 'map':
                 if 'center' in attrs:
                     if is_qid(attrs['center']):
                         attrs['center'] = self._qid_coords(attrs['center'])
@@ -257,13 +256,13 @@ class Essay(object):
                 if 'zoom' in attrs:
                     attrs['zoom'] = round(float(attrs['zoom']), 1)
 
-            elif  tag == 'map-layer':
+            elif tag == 'map-layer':
                 for layer_type in ('geojson', 'mapwarper'):
                     if layer_type in attrs:
                         attrs['type'] = layer_type
                         del attrs[layer_type]
 
-            elif  tag == 'image':
+            elif tag == 'image':
                 try:
                     #if attrs.get('region'):
                     #    attrs['region'] = [int(c.strip()) for c in attrs['region'].split(',')]
@@ -273,10 +272,25 @@ class Essay(object):
                 except:
                     pass # del attrs['region']
 
+            elif tag == 'audio':
+                source = attrs.get('src', attrs.get('url'))
+                if source:
+                    audio_type = source.split('.')[-1]
+                    if audio_type in ('mp3', 'ogg'):
+                        audio_contol = self._soup.new_tag('audio', controls=None)
+                        audio_contol.attrs['id'] = attrs['id']
+                        audio_contol.append(self._soup.new_tag('source', src=source, type=f'audio/{"mpeg" if audio_type == "mp3" else "ogg"}'))
+                        audio_contol['style'] = 'width:150px; height:30px; margin-bottom:-6px;'
+                        vem_elem.replace_with(audio_contol)
+                    else:
+                        vem_elem.decompose()
+                else:
+                    vem_elem.decompose()
+
             attrs['tagged_in'] = []
 
             # add id of enclosing element to entities 'tagged_in' attribute
-            if vem_elem.parent.name == 'p': # enclosing element is a paragraph
+            if vem_elem.parent and vem_elem.parent.name == 'p': # enclosing element is a paragraph
                 if 'id' in vem_elem.parent.attrs and not _is_empty(vem_elem.parent):
                     enclosing_element_id = vem_elem.parent.attrs['id']
                 else:
