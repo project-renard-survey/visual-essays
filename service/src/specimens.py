@@ -130,10 +130,12 @@ sparql_template = '''
                 <SELECTOR>
                 schema:description ?description ;
                 jwdt:P1106 ?jstorPlantsId ;
-                jwdt:P1661 ?specimenType ;
                 jwdt:P501 ?taxonName ;
                 jp:P1467 [ jps:P1467 ?img ;
                            jpq:P1669 ?imgSize ] .
+        OPTIONAL {
+            ?specimen jwdt:P1661 ?specimenType .
+        }
         OPTIONAL {
             ?specimen jwdt:P1660 ?specimenOf .
         }
@@ -240,7 +242,7 @@ def sort_specimens(specimens, **kwargs):
     return sorted_specimens
 
 def get_specimens(taxon_name=None, gpid=None, wdid=None, preload=False, **kwargs):
-    logger.info(f'get_specimens: taxon_name={taxon_name} max={kwargs.get("max")} preload={preload} args={kwargs}')
+    logger.info(f'get_specimens: taxon_name={taxon_name} gpid={gpid} max={kwargs.get("max")} preload={preload} args={kwargs}')
     if taxon_name:
         sparql = sparql_template.replace('<SELECTOR>', f'jwdt:P501 "{taxon_name}" ;')
     elif gpid:

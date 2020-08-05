@@ -306,12 +306,16 @@ export default {
     cursor: default;
   }
 
-  .vtl #essay p {
+  .vtl #essay p, .vtl #essay ol, .vtl #essay ul {
     padding-right: 32px;
     border-left: none;
     font-size: 1.4em;
     /* margin-bottom: 2.5em; */
     padding-left: 32px;
+  }
+
+  .vtl #essay ol, .vtl #essay ul {
+    margin: -10px 0 0 32px;
   }
 
   #essay p.active-elem {

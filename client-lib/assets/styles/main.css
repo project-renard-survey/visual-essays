@@ -161,6 +161,10 @@ blockquote {
         -ms-hyphens: none;
             hyphens: none;
 }
+blockquote {
+    margin-left: 3em;
+    border-left: 6px solid #ccc;
+}
 p a:link,
 p a:visited {
     /*
