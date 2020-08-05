@@ -309,7 +309,7 @@ export default {
   .vtl #essay p, .vtl #essay ol, .vtl #essay ul {
     padding-right: 32px;
     border-left: none;
-    font-size: 1.4em;
+    font-size: 1.4rem;
     /* margin-bottom: 2.5em; */
     padding-left: 32px;
   }
