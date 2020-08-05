@@ -166,7 +166,7 @@ module.exports = {
           if (nodes[nodeId] === undefined) {
             let id = `${transformed.nodes.length}`;
             let qid =
-              obj[nodeType].id[0] === "Q" ? obj[nodeType].id : undefined;
+              obj[nodeType].id[0] === "Q" ? `wd:${obj[nodeType].id}` : undefined;
             let label = obj[nodeType].label || obj[nodeType].id;
             nodes[nodeId] = id;
             transformed.nodes.push({ id, qid, label, title: label });

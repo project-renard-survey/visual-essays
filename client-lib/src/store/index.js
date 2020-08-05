@@ -90,10 +90,15 @@ export default new Vuex.Store({
     setSelectedParagraphID (state, id) { state.selectedParagraphID = id },
     setViewerIsOpen (state, isOpen) { state.viewerIsOpen = isOpen },
     updateItem (state, item) {
+      /*
       state.items = [ 
         ...state.items.filter(c => c.id !== item.id),
         { ...state.items.find(c => c.id === item.id), ...item }
       ]
+      */
+      const target = state.items.find(c => c.id === item.id)
+      if (target) Object.assign(target, item)
+      // console.log('updateItem', item, target, state.items)
     },
     setViewport(state, viewport) { 
       state.height = viewport.height

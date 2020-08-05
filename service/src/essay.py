@@ -252,9 +252,15 @@ class Essay(object):
                     if is_qid(attrs['center']):
                         attrs['center'] = self._qid_coords(attrs['center'])
                     else:
-                        attrs['center'] = [float(c.strip()) for c in attrs['center'].replace(',', ' ').split()]
+                        try:
+                            attrs['center'] = [float(c.strip()) for c in attrs['center'].replace(',', ' ').split()]
+                        except:
+                            attrs['center'] = [25, 0]
                 if 'zoom' in attrs:
-                    attrs['zoom'] = round(float(attrs['zoom']), 1)
+                    try:
+                        attrs['zoom'] = round(float(attrs['zoom']), 1)
+                    except:
+                        attrs['zoom'] = 2.5
 
             elif tag == 'map-layer':
                 for layer_type in ('geojson', 'mapwarper'):

@@ -351,7 +351,7 @@ def _is_entity_id(s, ns_required=False):
     eid = s.split(':')
     if len(eid) == 1 and ns_required:
         return False
-    if len(eid) == 2 and eid[0] not in NAMESPACES:
+    if len(eid) == 2 and eid[0] not in ('wd', 'jstor'):
         return False
     if len(eid) > 2:
         return False

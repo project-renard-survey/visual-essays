@@ -202,7 +202,7 @@
         this.tabs = availableGroups
         // this.activeTab = (this.tabs.indexOf(this.activeTab) >= 0 ? this.activeTab : undefined) || this.primaryTab || availableGroups[0] 
         this.activeTab = this.primaryTab || availableGroups[0] 
-        // console.log(`availableGroups=${availableGroups} activeTab=${this.activeTab}`)
+        // console.log(`groups: availableGroups=${availableGroups} activeTab=${this.activeTab}`)
       },
       primaryTab: {
         handler: function (value, prior) {
@@ -222,9 +222,15 @@
       },
       viewportWidth: {
         handler: function (value, prior) {
-          this.viewerWidth = this.$refs.viewer.$el.parentElement.offsetWidth
+          if (this.$refs.viewer) this.viewerWidth = this.$refs.viewer.$el.parentElement.offsetWidth
         },
-        immediate: false
+        immediate: true
+      },
+      viewerWidth: {
+        handler: function (value, prior) {
+          console.log(`Viewer.viewerWidth=${this.viewerWidth}`)
+        },
+        immediate: true
       },
       viewerIsOpen: {
         handler: function (isOpen) {
