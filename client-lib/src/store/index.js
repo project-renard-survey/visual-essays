@@ -98,7 +98,7 @@ export default new Vuex.Store({
       */
       const target = state.items.find(c => c.id === item.id)
       if (target) Object.assign(target, item)
-      // console.log('updateItem', item, target, state.items)
+      // console.log('updateItem', item, target)
     },
     setViewport(state, viewport) { 
       state.height = viewport.height

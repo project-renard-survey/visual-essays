@@ -24,11 +24,12 @@ module.exports = {
     */
   },
   data: () => ({
-    requested: new Set()
+    requested: new Set(),
+    entityInfo: undefined
   }),
   computed: {
     entity () { return this.$store.getters.items.find(entity => this.eid === entity.eid || this.eid === entity.id) || {} },
-    entityInfo () { return this.entity['summary info'] },
+    // entityInfo () { return this.entity['summary info'] },
     title () { return this.entityInfo && this.entityInfo.displaytitle || this.entity.label || this.entity.title },
     description () { return this.entityInfo ? this.entityInfo.description : this.entity.description },
     thumbnail () { return this.entityInfo && this.entityInfo.thumbnail ? this.entityInfo.thumbnail.source : null },
@@ -68,6 +69,7 @@ module.exports = {
             if (!updated['summary info']) {
               updated['summary info'] = null
             }
+            this.entityInfo = updated['summary info']
             updated.id = this.eid
             this.$store.dispatch('updateItem', updated)
           })
