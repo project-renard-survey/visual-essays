@@ -161,7 +161,7 @@ p {
             hyphens: none;
 }
 blockquote {
-    margin: 0 4em 0 3em;
+    margin: 0 4em 0 2em;
     border-left: 6px solid #ddd;
     text-align: justify;
     -webkit-hyphens: none;
@@ -170,9 +170,9 @@ blockquote {
             hyphens: none;
 }
 blockquote p {
-    line-height: 1.3em !important;
-    font-weight: 350;
-    font-size: 0.9em;
+    margin-left: 16px;
+    line-height: 1.4em !important;
+    font-size: 1em;
     font-style: italic;
 }
 p a:link,
