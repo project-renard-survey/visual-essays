@@ -151,8 +151,7 @@ h6 {
     line-height: 1;
     margin: 0.8em 0 0.4em 0;
 }
-p,
-blockquote {
+p {
     font-size: 1em;
     margin: 0 0 1.5em;
     line-height: 1.5;
@@ -162,8 +161,19 @@ blockquote {
             hyphens: none;
 }
 blockquote {
-    margin-left: 3em;
-    border-left: 6px solid #ccc;
+    margin: 0 4em 0 3em;
+    border-left: 6px solid #ddd;
+    text-align: justify;
+    -webkit-hyphens: none;
+       -moz-hyphens: none;
+        -ms-hyphens: none;
+            hyphens: none;
+}
+blockquote p {
+    line-height: 1.3em !important;
+    font-weight: 350;
+    font-size: 0.9em;
+    font-style: italic;
 }
 p a:link,
 p a:visited {

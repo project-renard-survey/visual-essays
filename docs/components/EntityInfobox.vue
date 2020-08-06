@@ -14,7 +14,7 @@ module.exports = {
   name: 'entity-infobox',
   props: {
     eid: { type: String, default: undefined },
-    imageFit: { type: String, default: 'contain' }
+    imageFit: { type: String, default: 'cover' }
     /* imageFit:
        fill = stretched to fit box
        contain = maintain its aspect ratio, scaled fit within the element’s box, letterboxed if needed
