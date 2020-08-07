@@ -172,8 +172,8 @@ module.exports = {
             let qid =
               obj[nodeType].id[0] === "Q" ? obj[nodeType].id : undefined;
             let label = obj[nodeType].label || obj[nodeType].id;
-            let x = obj[nodeType].x ? obj[nodeType].x : undefined;
-            let y = obj[nodeType].y ? obj[nodeType].y : undefined;
+            let x = obj[nodeType].x ? (this.width/2)*(obj[nodeType].x/100) : undefined;
+            let y = obj[nodeType].y ? (this.height/2)*(obj[nodeType].y/100) : undefined;
             let physics = obj[nodeType].x && obj[nodeType].y ? false : true;
             //let fixed = true
             nodes[nodeId] = id;
