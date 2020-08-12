@@ -37,7 +37,7 @@ import _ from 'lodash'
 
 import MobileDetect from 'mobile-detect'
 
-const VERSION = '0.7.36'
+const VERSION = '0.7.37'
 
 console.log(window.location.hostname)
 const componentsBaseURL = window.location.hostname === 'localhost' ? '' : 'https://jstor-labs.github.io/visual-essays'
@@ -49,7 +49,7 @@ const customScripts = [
 const customStyles = []
 
 const defaultComponents = [
-  { name: 'siteHeader', src: `${componentsBaseURL}/components/Header.vue` },
+  // { name: 'siteHeader', src: `${componentsBaseURL}/components/Header.vue` },
   { name: 'mapViewer', src: `${componentsBaseURL}/components/MapViewer.vue`, selectors: ['tag:map'], icon: 'fa-map-marker-alt', label: 'Map' },
   { name: 'imageViewer', src: `${componentsBaseURL}/components/ImageViewer/index.vue`, selectors: ['tag:image'], icon: 'fa-file-image', label: 'Images' },
   { name: 'staticImageViewer', src: `${componentsBaseURL}/components/ImageViewer/StaticImageViewer.vue` },
@@ -327,7 +327,7 @@ const waitForContent = () => {
   const essayElem = document.getElementById('essay')
   if (!window._essay && essayElem && essayElem.innerText.length > 0) {
     window._essay = essayElem.dataset.name
-    console.log(`essay=${window._essay}`)
+    //console.log(`essay=${window._essay}`)
   }
   if (current != window._essay) {
     current = window._essay

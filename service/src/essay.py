@@ -553,7 +553,7 @@ class Essay(object):
             manifest['sequences'][0]['canvases'][0]['label'] = label
         metadata = dict([(k,v) for k,v in item.items() if v and k in ('attribution', 'date', 'description', 'license', 'logo', 'rights')])
         metadata['source'] = item['url']
-        metadata['version'] = '2'
+        metadata['version'] = '3'
 
         for fld in ('attribution', 'description', 'license', 'logo'):
             if fld in metadata:
@@ -570,7 +570,7 @@ class Essay(object):
             headers={'Content-type': 'application/json'},
             json=manifest
         )
-        logger.info(f'{item["id"]} {resp.status_code}')
+        logger.info(f'{item["id"]} {resp.status_code} {item["url"]}')
         if resp.status_code == 200:
             manifest = resp.json()
             if '@id' in manifest:
@@ -578,7 +578,6 @@ class Essay(object):
                 if '@type' not in manifest:
                     manifest = requests.get(item['manifest'], headers={'Content-type': 'application/json'}).json()
         else:
-            logger.info(f'{item["id"]} {resp.status_code} {item["url"]}')
             manifest = None
         return resp.status_code, manifest
 
@@ -653,8 +652,18 @@ class Essay(object):
             manifest = self._make_manifest(item)
             if manifest and '@id' in manifest:
                 item['manifest'] = manifest['@id']
+                item['source'] = item['url']
                 item['url'] = manifest['sequences'][0]['canvases'][0]['images'][0]['resource']['@id']
                 item['iiif-url'] = manifest['sequences'][0]['canvases'][0]['images'][0]['resource']['service']['@id']
+                resp = requests.get(item['iiif-url'])
+                if resp == 404:
+                    logger.info(f'preload {item["id"]} {item["source"]} {resp.status_code}')
+                    resp = requests.post(
+                        'https://iiif.visual-essays.app/images/preload',
+                        headers={'Content-type': 'application/json'},
+                        json={'url': item['source']}
+                    )
+                    logger.info(f'preload {item["id"]} {item["source"]} {resp.status_code}')
         logger.debug(json.dumps(item, indent=2))
         return item
 
@@ -678,7 +687,7 @@ class Essay(object):
                 item = future.result()
                 if 'manifest' in item:
                     self._manifests_cache[image_url] = item['manifest']
-                logger.debug(f'id={item["id"]} manifest={item.get("manifest")}')
+                logger.info(f'id={item["id"]} manifest={item.get("manifest")} iiif-url={item.get("iiif-url")}')
 
     @property
     def json(self):

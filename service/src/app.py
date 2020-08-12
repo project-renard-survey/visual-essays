@@ -502,7 +502,7 @@ def essay(path=None):
                 markdown = get_gh_markdown(acct, repo, path)
 
             logger.info(f'essay: site={site} acct={acct} repo={repo} path={path} raw={raw} kwargs={kwargs} markdown={markdown is not None}')
-        
+
         if markdown:
             if raw:
                 return (markdown['text'], 200, cors_headers)
