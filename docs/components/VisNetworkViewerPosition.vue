@@ -1,7 +1,7 @@
 <template>
   <div id="vis" :style="containerStyle">
+    <div id="networktitle">{{this.items[0].title}}</div>
     <div id="mynetwork"></div>
-    <div id="networktitle">Vis Js Title</div>
   </div>
 </template>
 
@@ -166,6 +166,7 @@ module.exports = {
       const transformed = { nodes: [], edges: [] };
       objArray.forEach((obj) => {
         ['source', 'target'].forEach((nodeType) => {
+          console.log('obj[nodeType].image', obj[nodeType].image)
           let nodeId = obj[nodeType].id || obj[nodeType].label;
           if (nodes[nodeId] === undefined) {
             let id = `${transformed.nodes.length}`;
@@ -175,9 +176,11 @@ module.exports = {
             let x = obj[nodeType].x ? (this.width)*(obj[nodeType].x/100) : undefined;
             let y = obj[nodeType].y ? (this.height)*(obj[nodeType].y/100) : undefined;
             let physics = obj[nodeType].x && obj[nodeType].y ? false : true;
+            let image = obj[nodeType].image ? obj[nodeType].image : undefined;
+            let shape = obj[nodeType].image ? "circularImage" : undefined;
             //let fixed = true
             nodes[nodeId] = id;
-            transformed.nodes.push({ id, qid, label, title: label, x, y, physics});
+            transformed.nodes.push({ id, qid, label, title: label, x, y, physics, image, shape});
           }
         });
       });
@@ -254,17 +257,28 @@ module.exports = {
 </script>
 
 <style>
-.vis-network {
-  overflow: visible;
-}
-body {
-  color: #d3d3d3;
-  font: 12pt arial;
-  background-color: #222222;
-}
-#vis,
-#mynetwork {
-  width: 100%;
-  height: 100%;
-}
+  .vis-network {
+    overflow: visible;
+  }
+  body {
+    color: #d3d3d3;
+    font: 12pt arial;
+    background-color: #222222;
+  }
+  #vis,
+  #mynetwork {
+    width: 100%;
+    height: 100%;
+  }
+  #networktitle {
+    z-index:100;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    font: 16pt arial;
+    background-color:rgba(143, 223, 255, 0.5);
+    padding: 2%;
+    color: black;
+    text-align: center;
+  }
 </style>
